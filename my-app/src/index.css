@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
+
+/* Design tokens from the Figma file (Port / Desktop - 1).
+   "Helvetica Now Display" is a licensed Monotype face; Inter Tight is the
+   closest freely available fallback and keeps the tight display tracking. */
+@theme {
+  --font-display: "Helvetica Now Display", "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-hand: "Caveat", ui-serif, cursive;
+  --font-brush: "Nanum Brush Script", "Caveat", ui-serif, cursive;
+
+  --color-ink: #1a1a1a;
+  --color-ink-soft: #222222;
+  --color-body: #6c6c6c;
+  --color-accent: #ff8e63;
+  --color-accent-deep: #ed7d31;
+  --color-panel: #fafafa;
+  --color-chip: #e3e3e3;
+  --color-graphite: #2c2c2c;
+  --color-hairline: #eaeaea;
+  --color-muted: #8b94a5;
+  --color-meta: #535862;
+  --color-shell: #f2f2f2;
+  --color-slate: #74828f;
+  --color-onyx: #292929;
+  --color-peach: #ffd1b2;
+  --color-mint: #cdffdd;
+  --color-mint-edge: #00a938;
+  --color-sky: #eff8ff;
+  --color-sky-edge: #84cbff;
+  --color-live: #12c94f;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: #ffffff;
+  }
+}
+
+@utility scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline) transparent;
+}
+
+/* The "Life Outside Figma" backdrop. Figma draws this as ~1,000 individual
+   6.25px dots on a 54.21px pitch; one repeating gradient renders identically. */
+@utility dot-grid {
+  background-image: radial-gradient(circle, var(--color-chip) 3.125px, transparent 3.125px);
+  background-size: 54.21px 54.21px;
+  background-position: 17.4px 27.9px;
+}

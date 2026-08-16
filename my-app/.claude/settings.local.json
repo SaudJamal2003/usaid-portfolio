@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Desktop-Usaid-portfolio-my-app/4921ac29-6755-44ba-903f-e682307323db/scratchpad\")",
+      "Bash(node -e ' *)",
+      "mcp__figma__get_screenshot",
+      "Bash(curl -sL -o full.png \"https://www.figma.com/api/mcp/asset/622656ab-c12c-4443-8a11-4d1729731554.png\")",
+      "mcp__figma__get_design_context",
+      "mcp__figma__download_assets",
+      "Bash(mv arrow-1.svg arrow.svg)",
+      "Bash(rm -f arrow-2.svg arrow-3.svg arrow-4.svg)",
+      "Bash(curl -sL -o work-teaser.png \"https://www.figma.com/api/mcp/asset/76f29894-17cf-480b-aca7-1ac98cf65757.png\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const b=fs.readFileSync\\('work-teaser.png'\\);console.log\\('teaser',b.readUInt32BE\\(16\\)+'x'+b.readUInt32BE\\(20\\)\\);\")",
+      "Bash(curl -sL -o socials.png \"https://www.figma.com/api/mcp/asset/f94b5456-4522-40b5-b720-9987ae394ccc.png\")",
+      "Bash(rm -f src/App.css)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(npx eslint *)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4317/)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const b=fs.readFileSync\\('render-full.png'\\);console.log\\('dims',b.readUInt32BE\\(16\\)+'x'+b.readUInt32BE\\(20\\)\\);\")",
+      "Bash(python -c ' *)",
+      "Bash(mkdir -p .figma-tmp)",
+      "Bash(curl -sL -o .figma-tmp/desktop6.png \"https://www.figma.com/api/mcp/asset/5ccb6732-9ed8-402c-8fcb-f8af34be64f4.png\")",
+      "Bash(curl -sL -o .figma-tmp/life-section.png \"https://www.figma.com/api/mcp/asset/aa8e82f8-8573-494b-a259-8140ad28781e.png\")",
+      "Bash(curl -sL -o shukar-stat-arrow.svg \"https://www.figma.com/api/mcp/asset/66e76e14-e4c0-4f18-84d0-438e3aeb0d4d.svg\")",
+      "Bash(curl -sL -o shukar-quote.svg \"https://www.figma.com/api/mcp/asset/6f522997-c7f2-44c8-8e51-ee426f4950bc.svg\")"
+    ]
+  }
+}
