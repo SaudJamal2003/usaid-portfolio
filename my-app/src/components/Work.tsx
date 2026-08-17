@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import arrow from '../assets/figma/arrow.svg'
 import teaser from '../assets/figma/work-teaser.png'
 import cricpr from '../assets/figma/work-cricpr.png'
@@ -51,24 +52,48 @@ const ROW_TWO: Project[] = [
 ]
 
 function ProjectCard({ project }: { project: Project }) {
+  const isComingSoon = !project.href
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null)
+
+  const Tag = isComingSoon ? 'div' : 'a'
+
   return (
-    <a href={project.href ?? '#work'} className="group flex flex-col">
-      <img
-        src={project.cover}
-        alt={`${project.name} case study cover`}
-        className="w-full"
-        style={{ aspectRatio: project.aspect }}
-      />
-      <div className="mt-[23px] flex flex-col gap-[17px]">
-        <div className="flex items-center gap-[8px]">
-          <h3 className="font-display text-[24px] font-medium leading-[23.755px] tracking-[-0.0173em] text-black">
-            {project.name}
-          </h3>
-          <img src={arrow} alt="" className="size-[20px]" />
+    <Tag
+      {...(!isComingSoon && { href: project.href })}
+      className={`group relative flex flex-col ${isComingSoon ? 'cursor-none' : ''}`}
+      onMouseMove={
+        isComingSoon
+          ? (e: React.MouseEvent) => setCursorPos({ x: e.clientX, y: e.clientY })
+          : undefined
+      }
+      onMouseLeave={isComingSoon ? () => setCursorPos(null) : undefined}
+    >
+      {isComingSoon && cursorPos && (
+        <span
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black px-4 py-2 text-[15px] font-medium text-white shadow-lg"
+          style={{ left: cursorPos.x, top: cursorPos.y }}
+        >
+          Coming soon 👀
+        </span>
+      )}
+      <div className="flex flex-col transition-transform duration-300 ease-out will-change-transform group-hover:-rotate-2 group-hover:scale-[1.02]">
+        <img
+          src={project.cover}
+          alt={`${project.name} case study cover`}
+          className="w-full"
+          style={{ aspectRatio: project.aspect }}
+        />
+        <div className="mt-[23px] flex flex-col gap-[17px]">
+          <div className="flex items-center gap-[8px]">
+            <h3 className="font-display text-[24px] font-medium leading-[23.755px] tracking-[-0.0173em] text-black">
+              {project.name}
+            </h3>
+            <img src={arrow} alt="" className="size-[20px]" />
+          </div>
+          <p className="text-[20px] font-medium leading-[26px] text-ink">{project.description}</p>
         </div>
-        <p className="text-[20px] font-medium leading-[26px] text-ink">{project.description}</p>
       </div>
-    </a>
+    </Tag>
   )
 }
 

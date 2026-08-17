@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import camera from '../assets/figma/life-camera.png'
 import photoCricket from '../assets/figma/life-cricket.png'
 import photoKashmir from '../assets/figma/life-kashmir.png'
@@ -123,6 +124,10 @@ const POLAROIDS: Polaroid[] = [
   },
 ]
 
+/* Every card is draggable inside the dotted stage except "kashmir", which
+   stays tucked under the camera's film slot. */
+const FIXED_CARD_ID = 'kashmir'
+
 function NowPlayingBadge() {
   return (
     <div
@@ -137,26 +142,44 @@ function NowPlayingBadge() {
   )
 }
 
-function PolaroidCard({ card }: { card: Polaroid }) {
+function PolaroidCard({
+  card,
+  left,
+  top,
+  draggable,
+  zIndex,
+  onPointerDown,
+}: {
+  card: Polaroid
+  left: number
+  top: number
+  draggable: boolean
+  zIndex: number
+  onPointerDown: (e: React.PointerEvent) => void
+}) {
   return (
     <div
-      className="absolute"
+      className={`absolute ${draggable ? 'cursor-grab touch-none select-none active:cursor-grabbing' : ''}`}
       style={{
-        left: `${card.left}%`,
-        top: `${card.top}%`,
+        left: `${left}%`,
+        top: `${top}%`,
         width: `${card.width}%`,
         height: `${card.height}%`,
         transform: `rotate(${card.rotate}deg)`,
+        zIndex,
       }}
+      onPointerDown={draggable ? onPointerDown : undefined}
     >
       <img
         src={card.frame}
         alt=""
+        draggable={false}
         className="absolute inset-0 size-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.12)]"
       />
       <img
         src={card.photo}
         alt={card.alt}
+        draggable={false}
         className="absolute object-cover"
         style={{
           left: `${PHOTO.left}%`,
@@ -184,10 +207,57 @@ function PolaroidCard({ card }: { card: Polaroid }) {
 }
 
 export function LifeOutsideFigma() {
+  const stageRef = useRef<HTMLDivElement>(null)
+
+  const [positions, setPositions] = useState<Record<string, { left: number; top: number }>>(() =>
+    Object.fromEntries(POLAROIDS.map((card) => [card.id, { left: card.left, top: card.top }])),
+  )
+  const [stackOrder, setStackOrder] = useState<string[]>(() => POLAROIDS.map((card) => card.id))
+
+  // Offset from the card's top-left (in stage %) to the pointer, captured on
+  // pointer-down so the card doesn't jump to re-center under the cursor.
+  const dragOffset = useRef<{ id: string; dx: number; dy: number } | null>(null)
+
+  function stagePercent(clientX: number, clientY: number) {
+    const rect = stageRef.current!.getBoundingClientRect()
+    return {
+      x: ((clientX - rect.left) / rect.width) * 100,
+      y: ((clientY - rect.top) / rect.height) * 100,
+    }
+  }
+
+  function handlePointerDown(e: React.PointerEvent, card: Polaroid) {
+    const pos = stagePercent(e.clientX, e.clientY)
+    const current = positions[card.id]
+    dragOffset.current = { id: card.id, dx: pos.x - current.left, dy: pos.y - current.top }
+    setStackOrder((prev) => [...prev.filter((id) => id !== card.id), card.id])
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    const drag = dragOffset.current
+    if (!drag) return
+    const card = POLAROIDS.find((c) => c.id === drag.id)!
+    const pos = stagePercent(e.clientX, e.clientY)
+    const left = Math.min(Math.max(pos.x - drag.dx, 0), 100 - card.width)
+    const top = Math.min(Math.max(pos.y - drag.dy, 0), 100 - card.height)
+    setPositions((prev) => ({ ...prev, [drag.id]: { left, top } }))
+  }
+
+  function handlePointerUp() {
+    dragOffset.current = null
+  }
+
   return (
     <section className="mt-[218px] px-6">
       <div className="mx-auto max-w-[1392px] overflow-hidden rounded-[30px] bg-panel dot-grid">
-        <div className="@container relative aspect-[1392/1311] w-full">
+        <div
+          ref={stageRef}
+          className="@container relative aspect-[1392/1311] w-full"
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
           <h2 className="absolute inset-x-0 top-[9.6873%] text-center font-display text-[clamp(22px,5.7471cqw,80px)] leading-[1.1] tracking-[-0.05em] text-ink">
             Life Outside Figma
           </h2>
@@ -195,12 +265,25 @@ export function LifeOutsideFigma() {
           <img
             src={camera}
             alt=""
+            draggable={false}
             className="absolute left-[37.5719%] top-[19.5271%] h-[36.9947%] w-[27.5409%] object-contain"
           />
 
-          {POLAROIDS.map((card) => (
-            <PolaroidCard key={card.id} card={card} />
-          ))}
+          {POLAROIDS.map((card) => {
+            const draggable = card.id !== FIXED_CARD_ID
+            const pos = positions[card.id]
+            return (
+              <PolaroidCard
+                key={card.id}
+                card={card}
+                left={pos.left}
+                top={pos.top}
+                draggable={draggable}
+                zIndex={draggable ? stackOrder.indexOf(card.id) + 1 : 0}
+                onPointerDown={(e) => handlePointerDown(e, card)}
+              />
+            )
+          })}
         </div>
       </div>
     </section>

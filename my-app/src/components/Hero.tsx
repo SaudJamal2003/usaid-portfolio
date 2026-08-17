@@ -1,5 +1,24 @@
-import crown from '../assets/figma/hero-crown.png'
+import doodleCrown from '../assets/figma/hero-doodle-crown.png'
+import doodleProblem from '../assets/figma/hero-doodle-problem.png'
+import doodleThink from '../assets/figma/hero-doodle-think.png'
+import doodleSolution from '../assets/figma/hero-doodle-solution.png'
+import doodleDesign from '../assets/figma/hero-doodle-design.png'
+import doodleBlob from '../assets/figma/hero-doodle-blob.png'
+import doodleCar from '../assets/figma/hero-doodle-car.png'
 import portrait from '../assets/figma/hero-portrait.png'
+
+/* Cycle through on a shared 700ms timeline (100ms per doodle, see
+   hero-doodle-cycle in index.css) — one flashes in, holds briefly, flashes
+   out, and the next takes the same slot. */
+const HERO_DOODLES = [
+  { src: doodleCrown, alt: 'Crown doodle' },
+  { src: doodleProblem, alt: '"Problem!" doodle' },
+  { src: doodleThink, alt: '"Think!" doodle' },
+  { src: doodleSolution, alt: '"Solution!" doodle' },
+  { src: doodleDesign, alt: '"Design!" doodle' },
+  { src: doodleBlob, alt: 'Blob doodle' },
+  { src: doodleCar, alt: 'Car doodle' },
+]
 
 export function Hero() {
   return (
@@ -11,20 +30,28 @@ export function Hero() {
         </h1>
       </div>
 
-      {/* Portrait 574×511 with the crown pinned to its top edge (Figma 1:6336 / 1:6337).
-          The crown export carries a 3.5px effect bleed on every side, so its box is
-          nudged out by that amount to keep the designed geometry. */}
+      {/* Portrait 574×511 with the doodle carousel pinned to its top edge (Figma
+          1:6336 / 1:6337). The doodle box is centered on the same spot the
+          crown used to occupy, sized to fit the widest doodle. */}
       <div className="relative mx-auto mt-[42px] aspect-[574/511] w-full max-w-[574px]">
         <img
           src={portrait}
           alt="Portrait of Usaid Ahmed"
           className="absolute inset-0 size-full object-contain"
         />
-        <img
-          src={crown}
-          alt=""
-          className="absolute left-[24.65%] top-[-0.68%] w-[24.96%]"
-        />
+        <div className="absolute left-[19.72%] top-[-2.53%] h-[25.44%] w-[34.84%]" aria-hidden="true">
+          {HERO_DOODLES.map((doodle, i) => (
+            <img
+              key={doodle.src}
+              src={doodle.src}
+              alt=""
+              className={`absolute inset-0 m-auto max-h-full max-w-full object-contain opacity-0 animate-hero-doodle motion-reduce:animate-none ${
+                i === 0 ? 'motion-reduce:opacity-100' : 'motion-reduce:opacity-0'
+              }`}
+              style={{ animationDelay: `${-i * 0.5}s` }}
+            />
+          ))}
+        </div>
       </div>
     </section>
   )

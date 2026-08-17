@@ -54,3 +54,30 @@
   background-size: 54.21px 54.21px;
   background-position: 17.4px 27.9px;
 }
+
+/* Hero doodle carousel: every doodle shares one 700ms timeline, each taking a
+   1/7 slice (100ms apart via negative animation-delay) so exactly one is ever
+   visible in the shared slot. */
+@keyframes hero-doodle-cycle {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotate(-6deg);
+  }
+  3% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  9% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  12%,
+  100% {
+    opacity: 0;
+    transform: scale(0.8) rotate(6deg);
+  }
+}
+
+@utility animate-hero-doodle {
+  animation: hero-doodle-cycle 0.7s infinite;
+}
