@@ -216,7 +216,10 @@ type JourneyProps = {
 }
 
 export function Journey({ className = 'mt-[175px]', align = 'left' }: JourneyProps) {
-  const drag = useDragScroll()
+  // Destructured rather than kept as one `drag` object: reading members off a
+  // hook return that carries a ref trips react-hooks/refs during render.
+  const { ref: dragRef, onPointerDown, onPointerMove, onPointerUp, onPointerLeave } =
+    useDragScroll()
   const centered = align === 'center'
 
   return (
@@ -230,11 +233,11 @@ export function Journey({ className = 'mt-[175px]', align = 'left' }: JourneyPro
       </h2>
 
       <div
-        ref={drag.ref}
-        onPointerDown={drag.onPointerDown}
-        onPointerMove={drag.onPointerMove}
-        onPointerUp={drag.onPointerUp}
-        onPointerLeave={drag.onPointerLeave}
+        ref={dragRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerLeave}
         className="mt-[116px] cursor-grab select-none overflow-x-auto pb-4 active:cursor-grabbing [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         <div

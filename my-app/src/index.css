@@ -81,3 +81,27 @@
 @utility animate-hero-doodle {
   animation: hero-doodle-cycle 0.7s infinite;
 }
+
+/* SignatureLoader. The signature is filled outline artwork, so it is revealed
+   through a mask whose stroked paths follow the pen. Each of those paths sets
+   pathLength="1", so one flat dashoffset ramp writes any of them end to end;
+   SIGNATURE_STROKES supplies the per-stroke duration, delay and easing that
+   turn five ramps into handwriting. */
+@keyframes signature-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.signature-trace {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation-name: signature-draw;
+  animation-fill-mode: both;
+}
+
+/* Recolour the artwork to the site's ink without touching its geometry. Scoped
+   to the artwork group so it can never reach the mask's own paths. */
+.signature-ink path {
+  fill: currentColor;
+}

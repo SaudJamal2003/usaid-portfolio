@@ -15,6 +15,14 @@
       rel="stylesheet"
     />
     <title>Usaid Ahmed — Product Designer</title>
+    <!-- The signature loader paints white; match it here so the gap before
+         React mounts is the same white sheet and never flashes. -->
+    <style>
+      html,
+      body {
+        background-color: #ffffff;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

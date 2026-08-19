@@ -1,4 +1,5 @@
 import { useLayoutEffect, useSyncExternalStore } from "react";
+import { SignatureLoader } from "./components/SignatureLoader";
 import { About } from "./pages/About";
 import { Home } from "./pages/Home";
 import { ShukarHai } from "./pages/ShukarHai";
@@ -40,8 +41,11 @@ function App() {
     });
   }, [hash]);
 
-  if (isShukarHai) return <ShukarHai />;
-  return isAbout ? <About /> : <Home />;
+  return (
+    <SignatureLoader>
+      {isShukarHai ? <ShukarHai /> : isAbout ? <About /> : <Home />}
+    </SignatureLoader>
+  );
 }
 
 export default App;
