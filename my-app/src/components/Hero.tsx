@@ -6,6 +6,7 @@ import doodleDesign from '../assets/figma/hero-doodle-design.png'
 import doodleBlob from '../assets/figma/hero-doodle-blob.png'
 import doodleCar from '../assets/figma/hero-doodle-car.png'
 import portrait from '../assets/figma/hero-portrait.png'
+import { TypingWord } from './TypingWord'
 
 /* Cycle through on a shared 700ms timeline (100ms per doodle, see
    hero-doodle-cycle in index.css) — one flashes in, holds briefly, flashes
@@ -20,13 +21,16 @@ const HERO_DOODLES = [
   { src: doodleCar, alt: 'Car doodle' },
 ]
 
+/* Typed and backspaced one character at a time in this order, forever. */
+const HERO_WORDS = ['Overthink', 'Question', 'Rethink', 'Simplify', 'Improve']
+
 export function Hero() {
   return (
     <section id="home" className="mt-[58px]">
       <div className="flex flex-col items-center gap-[29px] px-6 text-center lg:px-[150px]">
         <p className="text-[22px] font-semibold leading-[26px] text-ink">Hi, myself Usaid! Andd...</p>
         <h1 className="max-w-[720px] font-display text-[clamp(40px,5.56vw,80px)] leading-[1.1] tracking-[-0.05em] text-ink">
-          Design is my favorite thing to <span className="text-accent">Overthink</span>
+          Design is my favorite thing to <TypingWord words={HERO_WORDS} />
         </h1>
       </div>
 
