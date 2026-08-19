@@ -84,7 +84,7 @@ export function Stats() {
           caption="Trusted by clients"
           captionSize="text-[24px]"
           blurbClassName="leading-normal"
-          className="h-[427px] bg-accent-deep sm:col-span-2 lg:col-span-1"
+          className="h-[427px] bg-[#FF8E63] sm:col-span-2 lg:col-span-1"
         />
       </div>
     </section>
