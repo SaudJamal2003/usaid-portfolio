@@ -11,6 +11,32 @@
       name="description"
       content="Usaid Ahmed — product designer. Design is my favorite thing to overthink."
     />
+
+    <!-- Open Graph / social sharing. This is a static Vite build with no SSR and
+         crawlers do not run the app's JavaScript, so these belong in the HTML
+         rather than being set from React. Absolute URLs are mandatory — every
+         scraper rejects relative ones. The origin is www, not the apex: the
+         apex 308s to www, and several scrapers will not follow a redirect on
+         og:image. It appears in three places below; change all three together
+         if the domain moves. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Usaid Ahmed" />
+    <meta property="og:url" content="https://www.usaidux.space/" />
+    <meta property="og:title" content="Usaid Ahmed - UX Designer" />
+    <meta property="og:description" content="Usaid Ahmed — product designer. Design is my favorite thing to overthink." />
+    <meta property="og:image" content="https://www.usaidux.space/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Usaid Ahmed — Design is my favorite thing to Overthink"
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Usaid Ahmed - UX Designer" />
+    <meta name="twitter:description" content="Usaid Ahmed — product designer. Design is my favorite thing to overthink." />
+    <meta name="twitter:image" content="https://www.usaidux.space/og-image.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
