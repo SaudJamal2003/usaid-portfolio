@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import connectorDown from '../assets/figma/connector-down.svg'
 import connectorUp from '../assets/figma/connector-up.svg'
 import job1 from '../assets/figma/job-1.png'
@@ -208,6 +208,111 @@ function useDragScroll() {
   return { ref, onPointerDown, onPointerMove, onPointerUp, onPointerLeave: onPointerUp }
 }
 
+const DESKTOP = '(min-width: 1024px)'
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
+
+function subscribeTo(query: string) {
+  return (onChange: () => void) => {
+    const media = window.matchMedia(query)
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }
+}
+
+/* Built once at module scope — useSyncExternalStore resubscribes whenever the
+   subscribe function changes identity. Same pattern TypingWord uses. */
+const subscribeToDesktop = subscribeTo(DESKTOP)
+const subscribeToReducedMotion = subscribeTo(REDUCED_MOTION)
+
+function useMediaQuery(subscribe: (onChange: () => void) => () => void, query: string) {
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+    () => false,
+  )
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+/**
+ * Drives the rail from the page's own vertical scroll rather than a horizontal
+ * one. The outer block is sized `100vh + travel`, so the sticky viewport inside
+ * it stays pinned for exactly `travel` pixels of scrolling; `travel` is measured
+ * as the distance that brings the centre of the last card to the centre of the
+ * viewport, which also makes the mapping 1:1 — a wheel notch slides the cards as
+ * far left as it would otherwise have moved the page down.
+ *
+ * Frames are written straight to the node: re-rendering React once per scroll
+ * event is what makes this kind of effect stutter.
+ */
+function useScrollPinnedRail(active: boolean) {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const travelRef = useRef(0)
+  const offsetRef = useRef(0)
+  const [travel, setTravel] = useState(0)
+
+  useLayoutEffect(() => {
+    const section = sectionRef.current
+    const viewport = viewportRef.current
+    const track = trackRef.current
+    if (!active || !section || !viewport || !track) return
+
+    let frame = 0
+
+    const draw = () => {
+      frame = 0
+      const distance = travelRef.current
+      // The section's top edge counts down to 0 as the sticky child pins, then
+      // to -distance as it unpins, so -top is how far into the pin we are.
+      const progress =
+        distance > 0 ? clamp(-section.getBoundingClientRect().top / distance, 0, 1) : 0
+      offsetRef.current = progress * distance
+      track.style.transform = `translate3d(${-offsetRef.current}px, 0, 0)`
+    }
+
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(draw)
+    }
+
+    const measure = () => {
+      const last = track.lastElementChild
+      if (!last) return
+      // Rects already include the transform, so add back what is translated to
+      // recover the last card's untranslated layout position.
+      const bounds = last.getBoundingClientRect()
+      const centre =
+        bounds.left +
+        bounds.width / 2 -
+        viewport.getBoundingClientRect().left +
+        offsetRef.current
+      travelRef.current = Math.max(0, Math.round(centre - viewport.clientWidth / 2))
+      setTravel(travelRef.current)
+      draw()
+    }
+
+    window.addEventListener('scroll', schedule, { passive: true })
+    // Catches window resizes, zoom and a scrollbar appearing, all of which move
+    // the centre the last card has to land on.
+    const observer = new ResizeObserver(measure)
+    observer.observe(viewport)
+    measure()
+
+    return () => {
+      window.removeEventListener('scroll', schedule)
+      observer.disconnect()
+      if (frame) cancelAnimationFrame(frame)
+      track.style.transform = ''
+      offsetRef.current = 0
+    }
+  }, [active])
+
+  return { sectionRef, viewportRef, trackRef, travel }
+}
+
 type JourneyProps = {
   /** section spacing — differs between the home page and the about page */
   className?: string
@@ -220,36 +325,66 @@ export function Journey({ className = 'mt-[175px]', align = 'left' }: JourneyPro
   // hook return that carries a ref trips react-hooks/refs during render.
   const { ref: dragRef, onPointerDown, onPointerMove, onPointerUp, onPointerLeave } =
     useDragScroll()
+  const isDesktop = useMediaQuery(subscribeToDesktop, DESKTOP)
+  const prefersReducedMotion = useMediaQuery(subscribeToReducedMotion, REDUCED_MOTION)
+  // Narrow screens keep the drag rail — there is no width there for a pin to
+  // read as anything but a hijacked scroll — and so does reduced motion.
+  const pinned = isDesktop && !prefersReducedMotion
+  const { sectionRef, viewportRef, trackRef, travel } = useScrollPinnedRail(pinned)
+
   const centered = align === 'center'
+  const cards = ROLES.map((role) => <RoleGroup key={role.company} role={role} />)
 
   return (
     <section id="about" className={className}>
       <h2
-        className={`px-6 font-display text-[clamp(40px,5.56vw,80px)] leading-[1.1] tracking-[-0.05em] text-ink ${
+        className={`px-6 font-display text-[clamp(40px,5.56vw,80px)] leading-[1.1] tracking-[-0.02em] text-ink ${
           centered ? 'text-center lg:px-[223px]' : 'lg:px-0 lg:ps-[402px]'
         }`}
       >
         The Journey So Far
       </h2>
 
-      <div
-        ref={dragRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerLeave={onPointerLeave}
-        className="mt-[116px] cursor-grab select-none overflow-x-auto pb-4 active:cursor-grabbing [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-      >
+      {pinned ? (
+        /* Tall enough to spend `travel` pixels of scrolling on the pin, and no
+           taller, so the section releases the moment the last card is centred. */
         <div
-          className={`flex w-max gap-[40px] px-6 lg:pe-[60px] ${
-            centered ? 'lg:ps-[223px]' : 'lg:ps-[402px]'
-          }`}
+          ref={sectionRef}
+          className="mt-[24px]"
+          style={{ height: `calc(100vh + ${travel}px)` }}
         >
-          {ROLES.map((role) => (
-            <RoleGroup key={role.company} role={role} />
-          ))}
+          <div
+            ref={viewportRef}
+            className="sticky top-0 flex h-screen items-center overflow-hidden"
+          >
+            <div
+              ref={trackRef}
+              className={`flex w-max gap-[40px] pe-[60px] will-change-transform ${
+                centered ? 'ps-[223px]' : 'ps-[402px]'
+              }`}
+            >
+              {cards}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div
+          ref={dragRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerLeave={onPointerLeave}
+          className="mt-[116px] cursor-grab select-none overflow-x-auto pb-4 active:cursor-grabbing [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div
+            className={`flex w-max gap-[40px] px-6 lg:pe-[60px] ${
+              centered ? 'lg:ps-[223px]' : 'lg:ps-[402px]'
+            }`}
+          >
+            {cards}
+          </div>
+        </div>
+      )}
     </section>
   )
 }

@@ -120,7 +120,7 @@ export function Work() {
 
         <div className="mt-16 flex flex-col items-center justify-center gap-[20px] lg:mt-[120px]">
           <img src={teaser} alt="" className="h-[162px] w-[165px] object-contain" />
-          <p className="text-center font-display text-[clamp(32px,3.9vw,56px)] leading-[1.119] tracking-[-0.0714em] text-black">
+          <p className="text-center font-display text-[clamp(32px,3.9vw,56px)] leading-[1.119] tracking-[-0.05em] text-black">
             New cases are on the way,
             <br />
             slowly but surely 😅

@@ -11,7 +11,10 @@ import { SiteHeader } from "../components/SiteHeader";
 export function About() {
   return (
     <>
-      <div className="mx-auto w-full max-w-[1440px] overflow-x-hidden bg-white font-sans text-ink antialiased">
+      {/* overflow-x-*clip*, not hidden: hidden computes overflow-y to auto, which
+          makes this div a scroll container and stops the Journey rail's sticky
+          viewport from ever pinning. clip cuts the same overflow without one. */}
+      <div className="mx-auto w-full max-w-[1440px] overflow-x-clip bg-white font-sans text-ink antialiased">
         <SiteHeader current="About" className="h-[110px]" />
         <main className="pt-[110px]">
           <AboutIntro />
