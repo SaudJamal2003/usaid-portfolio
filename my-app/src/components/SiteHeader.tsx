@@ -4,7 +4,7 @@ import navDot from "../assets/figma/nav-dot.svg";
 const NAV_LINKS = [
   { label: "Home", href: "#home" },
   { label: "About", href: "#/about" },
-  { label: "Work", href: "#/work/shukar-hai" },
+  { label: "Work", href: "#work" },
 ];
 
 type SiteHeaderProps = {

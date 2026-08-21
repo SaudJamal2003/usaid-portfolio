@@ -67,7 +67,7 @@ export function Stats() {
         <div className="flex flex-col gap-[16px]">
           <MetricCard
             blurb="Earn back on your investment within 30 days"
-            value="$2.5+"
+            value="$2.5K+"
             caption="revenue Generated"
             className="h-[323px] bg-graphite"
           />
