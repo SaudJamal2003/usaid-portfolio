@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import arrow from '../assets/figma/arrow.svg'
 import teaser from '../assets/figma/work-teaser.png'
 import cricpr from '../assets/figma/work-cricpr.png'
@@ -54,26 +54,47 @@ const ROW_TWO: Project[] = [
 function ProjectCard({ project }: { project: Project }) {
   const isComingSoon = !project.href
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null)
+  const cardRef = useRef<HTMLDivElement & HTMLAnchorElement>(null)
+
+  /* Scrolling slides the card out from under a stationary cursor without any
+     mouse event being dispatched, which would otherwise leave the label pinned
+     to a spot the card no longer occupies. Re-ask the document what is actually
+     under the pointer instead of trusting the last hover we saw. */
+  useEffect(() => {
+    if (!cursorPos) return
+
+    const verify = () => {
+      const under = document.elementFromPoint(cursorPos.x, cursorPos.y)
+      if (!under || !cardRef.current?.contains(under)) setCursorPos(null)
+    }
+
+    // Capture, so a scroll inside any nested scroller counts too.
+    window.addEventListener('scroll', verify, { passive: true, capture: true })
+    return () => window.removeEventListener('scroll', verify, { capture: true })
+  }, [cursorPos])
 
   const Tag = isComingSoon ? 'div' : 'a'
+  /* Every card swaps the pointer for a label; only the wording differs between
+     a case study you can open and one that isn't built yet. */
+  const hint = isComingSoon ? 'Coming soon 👀' : 'Click me 👆🏻'
 
   return (
     <Tag
       {...(!isComingSoon && { href: project.href })}
-      className={`group relative flex flex-col ${isComingSoon ? 'cursor-none' : ''}`}
-      onMouseMove={
-        isComingSoon
-          ? (e: React.MouseEvent) => setCursorPos({ x: e.clientX, y: e.clientY })
-          : undefined
-      }
-      onMouseLeave={isComingSoon ? () => setCursorPos(null) : undefined}
+      ref={cardRef}
+      className="group relative flex cursor-none flex-col"
+      onMouseMove={(e: React.MouseEvent) => setCursorPos({ x: e.clientX, y: e.clientY })}
+      onMouseLeave={() => setCursorPos(null)}
     >
-      {isComingSoon && cursorPos && (
+      {cursorPos && (
         <span
+          // Sits inside the anchor, so it would otherwise be read out as part of
+          // the link's name.
+          aria-hidden="true"
           className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black px-4 py-2 text-[15px] font-medium text-white shadow-lg"
           style={{ left: cursorPos.x, top: cursorPos.y }}
         >
-          Coming soon 👀
+          {hint}
         </span>
       )}
       <div className="flex flex-col transition-transform duration-300 ease-out will-change-transform group-hover:-rotate-2 group-hover:scale-[1.02]">

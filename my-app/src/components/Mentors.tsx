@@ -194,7 +194,7 @@ export function Mentors() {
       <div className="mx-auto flex w-full max-w-[1288px] flex-col gap-16 lg:grid lg:grid-cols-[524px_724px] lg:gap-[40px]">
         <div className="lg:pt-[15.9px]">
           <h2 className="max-w-[467px] font-display text-[clamp(36px,3.9vw,56px)] leading-[1.119] tracking-[-0.0536em] text-black">
-            Mentors who made me all I am today.
+             The Mentors <br /> Behind My Growth
           </h2>
           <img src={underline} alt="" className="-mt-[9px] h-[29px] w-[363px] max-w-full" />
 
