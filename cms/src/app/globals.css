@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* CMS design system (§52). Restrained on purpose: this is a productivity tool,
+   not a showcase. Light surface, near-black text, muted secondary, thin
+   borders, minimal shadow, 8px spacing rhythm. The accent is borrowed from the
+   portfolio so the CMS reads as the same product. */
+@theme {
+  --color-canvas: #ffffff;
+  --color-surface: #fafafa;
+  --color-raised: #ffffff;
+  --color-line: #e8e8e8;
+  --color-line-strong: #d4d4d4;
+
+  --color-ink: #141414;
+  --color-ink-soft: #3f3f3f;
+  --color-muted: #767676;
+  --color-faint: #9e9e9e;
+
+  --color-accent: #ff8e63;
+  --color-accent-deep: #ed7d31;
+  --color-accent-ink: #7c3a12;
+
+  --color-ok: #12a150;
+  --color-ok-bg: #eafaf0;
+  --color-warn: #b45309;
+  --color-warn-bg: #fef6e7;
+  --color-danger: #d93025;
+  --color-danger-bg: #fdeceb;
+  --color-info-bg: #eff6ff;
+  --color-info: #1d63d1;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04";
+  }
+
+  /* Strong, consistent focus ring — §53 requires it to be visible everywhere. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-deep);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
