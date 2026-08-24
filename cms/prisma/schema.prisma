@@ -1,0 +1,427 @@
+// Portfolio CMS schema.
+//
+// Modelled from an audit of the existing Vite portfolio rather than from a
+// generic CMS template: every content table below maps to something currently
+// hardcoded in my-app/src. Animation and geometry constants are deliberately
+// absent — those stay in the frontend (requirements doc §3).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  EDITOR
+}
+
+enum BlockType {
+  TEXT
+  IMAGE
+  IMAGE_TEXT
+  GALLERY
+  FULL_WIDTH_IMAGE
+  VIDEO
+  QUOTE
+  STATS
+  CTA
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  role         UserRole  @default(OWNER)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions   Session[]
+  activities ActivityLog[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// Login throttling (requirements §8). Rows are pruned on successful login.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@map("login_attempts")
+}
+
+// ---------------------------------------------------------------------------
+// Media — binaries live in MinIO, only metadata lives here (§62.12)
+// ---------------------------------------------------------------------------
+
+model Media {
+  id               String   @id @default(cuid())
+  storageKey       String   @unique
+  originalFilename String
+  mimeType         String
+  size             Int
+  width            Int?
+  height           Int?
+  altText          String?
+  caption          String?
+  description      String?
+  // Derived renditions: { thumb, medium, large } → storage keys.
+  renditions       Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Every inbound reference is named so the delete guard can report exactly
+  // where an asset is used before allowing removal (§38).
+  projectThumbnails   Project[]     @relation("ProjectThumbnail")
+  projectHeroes       Project[]     @relation("ProjectHero")
+  caseStudyHeroes     CaseStudy[]   @relation("CaseStudyHero")
+  caseStudyThumbnails CaseStudy[]   @relation("CaseStudyThumb")
+  experienceLogos     Experience[]
+  mentorPhotos        Mentor[]
+  galleryImages       GalleryItem[]
+  serviceIcons        Service[]
+  testimonialAvatars  Testimonial[] @relation("TestimonialAvatar")
+  testimonialLogos    Testimonial[] @relation("TestimonialLogo")
+  seoImages           SeoMetadata[]
+  heroPortraits       HomepageHero[]
+  aboutPortraits      AboutContent[]
+  settingsOgImages    SiteSettings[] @relation("SettingsOgImage")
+  settingsFavicons    SiteSettings[] @relation("SettingsFavicon")
+
+  @@map("media")
+}
+
+// ---------------------------------------------------------------------------
+// Singletons — one row each, enforced by a fixed primary key
+// ---------------------------------------------------------------------------
+
+model SiteSettings {
+  id                String   @id @default("singleton")
+  siteName          String
+  siteDescription   String
+  contactEmail      String
+  location          String?
+  availabilityLabel String?
+  defaultSeoTitle   String?
+  defaultSeoDesc    String?
+  ogImageId         String?
+  ogImage           Media?   @relation("SettingsOgImage", fields: [ogImageId], references: [id], onDelete: SetNull)
+  faviconId         String?
+  favicon           Media?   @relation("SettingsFavicon", fields: [faviconId], references: [id], onDelete: SetNull)
+  updatedAt         DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+model HomepageHero {
+  id            String   @id @default("singleton")
+  eyebrow       String?
+  titlePrefix   String
+  // TypingWord cycles these; the timing constants stay in the frontend.
+  typingWords   String[]
+  description   String?
+  primaryCtaLabel String?
+  primaryCtaUrl   String?
+  portraitId    String?
+  portrait      Media?   @relation(fields: [portraitId], references: [id], onDelete: SetNull)
+  updatedAt     DateTime @updatedAt
+
+  @@map("homepage_hero")
+}
+
+model AboutContent {
+  id          String   @id @default("singleton")
+  heading     String
+  bio         String
+  portraitId  String?
+  portrait    Media?   @relation(fields: [portraitId], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt
+
+  @@map("about_content")
+}
+
+model FooterSettings {
+  id            String   @id @default("singleton")
+  description   String?
+  email         String
+  copyright     String?
+  ctaLabel      String?
+  ctaUrl        String?
+  updatedAt     DateTime @updatedAt
+
+  @@map("footer_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Repeatable collections
+// ---------------------------------------------------------------------------
+
+model NavigationItem {
+  id           String  @id @default(cuid())
+  label        String
+  url          String
+  openInNewTab Boolean @default(false)
+  visible      Boolean @default(true)
+  displayOrder Int
+
+  @@index([displayOrder])
+  @@map("navigation_items")
+}
+
+model SocialLink {
+  id           String  @id @default(cuid())
+  platform     String
+  url          String
+  visible      Boolean @default(true)
+  displayOrder Int
+
+  @@index([displayOrder])
+  @@map("social_links")
+}
+
+model StatCard {
+  id           String  @id @default(cuid())
+  value        String
+  caption      String
+  blurb        String?
+  displayOrder Int
+  visible      Boolean @default(true)
+
+  @@index([displayOrder])
+  @@map("stat_cards")
+}
+
+model Experience {
+  id           String        @id @default(cuid())
+  company      String
+  role         String
+  description  String?
+  // Per-role, deliberately. The frontend currently shares one HIGHLIGHTS array
+  // across every role so all four cards render identical bullets; modelling it
+  // here is what fixes that (§9).
+  highlights   String[]
+  startDate    String
+  endDate      String?
+  isCurrent    Boolean       @default(false)
+  location     String?
+  logoId       String?
+  logo         Media?        @relation(fields: [logoId], references: [id], onDelete: SetNull)
+  displayOrder Int
+  status       ContentStatus @default(PUBLISHED)
+
+  @@index([displayOrder])
+  @@map("experience")
+}
+
+model Mentor {
+  id           String        @id @default(cuid())
+  name         String
+  role         String
+  tribute      String
+  photoId      String?
+  photo        Media?        @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  displayOrder Int
+  status       ContentStatus @default(PUBLISHED)
+
+  @@index([displayOrder])
+  @@map("mentors")
+}
+
+model GalleryItem {
+  id           String        @id @default(cuid())
+  caption      String?
+  imageId      String?
+  image        Media?        @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  displayOrder Int
+  status       ContentStatus @default(PUBLISHED)
+
+  @@index([displayOrder])
+  @@map("gallery_items")
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  iconId       String?
+  icon         Media?        @relation(fields: [iconId], references: [id], onDelete: SetNull)
+  displayOrder Int
+  status       ContentStatus @default(DRAFT)
+
+  @@index([displayOrder])
+  @@map("services")
+}
+
+model Testimonial {
+  id           String        @id @default(cuid())
+  name         String
+  role         String?
+  company      String?
+  quote        String
+  linkedinUrl  String?
+  avatarId     String?
+  avatar       Media?        @relation("TestimonialAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+  companyLogoId String?
+  companyLogo  Media?        @relation("TestimonialLogo", fields: [companyLogoId], references: [id], onDelete: SetNull)
+  featured     Boolean       @default(false)
+  displayOrder Int
+  status       ContentStatus @default(DRAFT)
+
+  @@index([displayOrder])
+  @@map("testimonials")
+}
+
+// ---------------------------------------------------------------------------
+// Projects and case studies
+// ---------------------------------------------------------------------------
+
+model Project {
+  id               String        @id @default(cuid())
+  title            String
+  slug             String        @unique
+  shortDescription String?
+  category         String?
+  industry         String?
+  year             String?
+  role             String?
+  technologies     String[]
+  externalUrl      String?
+  // The frontend renders each card into a fixed artboard slot, e.g. "586/466".
+  aspectRatio      String?
+  thumbnailId      String?
+  thumbnail        Media?        @relation("ProjectThumbnail", fields: [thumbnailId], references: [id], onDelete: SetNull)
+  heroId           String?
+  hero             Media?        @relation("ProjectHero", fields: [heroId], references: [id], onDelete: SetNull)
+  caseStudyId      String?       @unique
+  caseStudy        CaseStudy?    @relation(fields: [caseStudyId], references: [id], onDelete: SetNull)
+  featured         Boolean       @default(false)
+  displayOrder     Int
+  status           ContentStatus @default(DRAFT)
+  publishedAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status, displayOrder])
+  @@map("projects")
+}
+
+model CaseStudy {
+  id               String        @id @default(cuid())
+  title            String
+  slug             String        @unique
+  shortDescription String?
+  client           String?
+  industry         String?
+  projectType      String?
+  year             String?
+  duration         String?
+  role             String?
+  team             String?
+  externalUrl      String?
+  prototypeUrl     String?
+  heroTitle        String?
+  heroDescription  String?
+  heroId           String?
+  hero             Media?        @relation("CaseStudyHero", fields: [heroId], references: [id], onDelete: SetNull)
+  thumbnailId      String?
+  thumbnail        Media?        @relation("CaseStudyThumb", fields: [thumbnailId], references: [id], onDelete: SetNull)
+  featured         Boolean       @default(false)
+  status           ContentStatus @default(DRAFT)
+  publishedAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  blocks  CaseStudyBlock[]
+  project Project?
+
+  @@index([status])
+  @@map("case_studies")
+}
+
+model CaseStudyBlock {
+  id          String    @id @default(cuid())
+  caseStudyId String
+  caseStudy   CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: Cascade)
+  type        BlockType
+  // Shape is validated per type by a Zod discriminated union before it lands
+  // here, so adding a block type never means a migration (§17).
+  data        Json
+  displayOrder Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([caseStudyId, displayOrder])
+  @@map("case_study_blocks")
+}
+
+// ---------------------------------------------------------------------------
+// SEO — stored now, consumed later.
+//
+// The portfolio is a Vite SPA on hash routing, so per-page metadata cannot be
+// served to crawlers today (§14). These rows exist so the data is already
+// there if path routing and prerendering ever land.
+// ---------------------------------------------------------------------------
+
+model SeoMetadata {
+  id           String  @id @default(cuid())
+  entityType   String
+  entityId     String
+  title        String?
+  description  String?
+  canonicalUrl String?
+  noIndex      Boolean @default(false)
+  ogImageId    String?
+  ogImage      Media?  @relation(fields: [ogImageId], references: [id], onDelete: SetNull)
+
+  @@unique([entityType, entityId])
+  @@map("seo_metadata")
+}
+
+// ---------------------------------------------------------------------------
+// Audit trail
+// ---------------------------------------------------------------------------
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("activity_logs")
+}
