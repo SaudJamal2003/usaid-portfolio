@@ -1,5 +1,6 @@
 import { useLayoutEffect, useSyncExternalStore } from "react";
 import { SignatureLoader } from "./components/SignatureLoader";
+import { ContentProvider } from "./content/ContentProvider";
 import { About } from "./pages/About";
 import { Home } from "./pages/Home";
 import { ShukarHai } from "./pages/ShukarHai";
@@ -41,10 +42,15 @@ function App() {
     });
   }, [hash]);
 
+  /* The provider sits outside the loader so its request starts on the very
+     first frame, in parallel with the signature being drawn, rather than after
+     the loader finishes. */
   return (
-    <SignatureLoader>
-      {isShukarHai ? <ShukarHai /> : isAbout ? <About /> : <Home />}
-    </SignatureLoader>
+    <ContentProvider>
+      <SignatureLoader>
+        {isShukarHai ? <ShukarHai /> : isAbout ? <About /> : <Home />}
+      </SignatureLoader>
+    </ContentProvider>
   );
 }
 

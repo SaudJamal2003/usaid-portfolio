@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useContent } from '../content/ContentProvider'
 import arrow from '../assets/figma/arrow.svg'
 import teaser from '../assets/figma/work-teaser.png'
 import cricpr from '../assets/figma/work-cricpr.png'
@@ -16,7 +17,8 @@ type Project = {
   href?: string
 }
 
-const ROW_ONE: Project[] = [
+/* Bundled fallback, used when the CMS is unreachable or returns nothing (§18). */
+const FALLBACK_PROJECTS: Project[] = [
   {
     name: 'Shukar hai',
     description:
@@ -32,9 +34,6 @@ const ROW_ONE: Project[] = [
     cover: cricpr,
     aspect: '675/466',
   },
-]
-
-const ROW_TWO: Project[] = [
   {
     name: 'Sprinto',
     description:
@@ -119,6 +118,25 @@ function ProjectCard({ project }: { project: Project }) {
 }
 
 export function Work() {
+  const content = useContent()
+
+  /* CMS projects when there are any, otherwise the bundled list. The rows keep
+     their Figma column ratios, so the grid geometry is unchanged either way --
+     the CMS supplies content, never layout. */
+  const projects: Project[] =
+    content && content.projects.length > 0
+      ? content.projects.map((project) => ({
+          name: project.title,
+          description: project.shortDescription ?? '',
+          cover: project.thumbnail?.mediumUrl ?? project.thumbnail?.url ?? '',
+          aspect: project.aspectRatio ?? '586/466',
+          href: project.caseStudySlug ? `#/work/${project.caseStudySlug}` : undefined,
+        }))
+      : FALLBACK_PROJECTS
+
+  const rowOne = projects.slice(0, 2)
+  const rowTwo = projects.slice(2, 4)
+
   return (
     <section id="work" className="mt-[239px] px-4 sm:px-6">
       <h2 className="text-center font-display text-[clamp(40px,5.56vw,80px)] leading-[1.1] tracking-[-0.05em] text-ink">
@@ -128,12 +146,12 @@ export function Work() {
       <div className="mx-auto mt-[35px] w-full max-w-[1405px] rounded-[30px] bg-panel p-6 pb-16 sm:p-10 sm:pb-20 lg:p-[60px] lg:pb-[120px]">
         <div className="flex flex-col gap-[40px]">
           <div className="grid grid-cols-1 gap-[40px] lg:grid-cols-[586fr_675fr] lg:gap-[24px]">
-            {ROW_ONE.map((project) => (
+            {rowOne.map((project) => (
               <ProjectCard key={project.name} project={project} />
             ))}
           </div>
           <div className="grid grid-cols-1 gap-[40px] lg:grid-cols-[675fr_586fr] lg:gap-[24px]">
-            {ROW_TWO.map((project) => (
+            {rowTwo.map((project) => (
               <ProjectCard key={project.name} project={project} />
             ))}
           </div>
