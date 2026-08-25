@@ -18,7 +18,10 @@ export async function GET(request: Request) {
         'Cache-Control': 'public, max-age=30, stale-while-revalidate=300',
       },
     })
-  } catch {
+  } catch (error) {
+    // The portfolio falls back to bundled content on a 503, so this would
+    // otherwise fail silently and invisibly.
+    console.error('[api/v1/content] failed to build payload:', error)
     return NextResponse.json({ error: 'Content unavailable' }, { status: 503, headers: corsHeaders(origin) })
   }
 }

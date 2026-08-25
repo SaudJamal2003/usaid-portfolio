@@ -36,7 +36,7 @@ type MediaRow = {
 const asMedia = (row: MediaRow | null) => (row ? mediaPayload(row) : null)
 
 export async function buildPublicContent() {
-  const [settings, hero, about, footer, nav, socials, stats, experience, mentors, gallery, services, testimonials, projects, caseStudies] =
+  const [settings, hero, about, footer, contactCta, clientAvatars, nav, socials, stats, experience, mentors, gallery, services, testimonials, projects, caseStudies] =
     await Promise.all([
       db.siteSettings.findUnique({
         where: { id: 'singleton' },
@@ -51,6 +51,11 @@ export async function buildPublicContent() {
         include: { portrait: { select: mediaSelect } },
       }),
       db.footerSettings.findUnique({ where: { id: 'singleton' } }),
+      db.contactCta.findUnique({ where: { id: 'singleton' } }),
+      db.clientAvatar.findMany({
+        orderBy: { displayOrder: 'asc' },
+        include: { media: { select: mediaSelect } },
+      }),
       db.navigationItem.findMany({ where: { visible: true }, orderBy: { displayOrder: 'asc' } }),
       db.socialLink.findMany({ where: { visible: true }, orderBy: { displayOrder: 'asc' } }),
       db.statCard.findMany({ where: { visible: true }, orderBy: { displayOrder: 'asc' } }),
@@ -98,6 +103,7 @@ export async function buildPublicContent() {
       contactEmail: settings.contactEmail,
       location: settings.location,
       availabilityLabel: settings.availabilityLabel,
+      clientsLabel: settings.clientsLabel,
       ogImage: asMedia(settings.ogImage),
       favicon: asMedia(settings.favicon),
     },
@@ -118,6 +124,12 @@ export async function buildPublicContent() {
       ctaLabel: footer.ctaLabel,
       ctaUrl: footer.ctaUrl,
     },
+    contactCta: contactCta && {
+      note: contactCta.note,
+      buttonLabel: contactCta.buttonLabel,
+      buttonUrl: contactCta.buttonUrl,
+    },
+    clientAvatars: clientAvatars.map((row) => asMedia(row.media)).filter(Boolean),
     navigation: nav.map((n) => ({ label: n.label, url: n.url, openInNewTab: n.openInNewTab })),
     socials: socials.map((s) => ({ platform: s.platform, url: s.url })),
     stats: stats.map((s) => ({ value: s.value, caption: s.caption, blurb: s.blurb })),

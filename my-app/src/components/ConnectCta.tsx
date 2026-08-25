@@ -1,3 +1,5 @@
+import { useContent } from '../content/ContentProvider'
+
 /* The Connect button is a stack of gradient shells, reproduced at the Figma
    dimensions and scaled down as a unit on narrow screens. */
 function Burst({ className }: { className?: string }) {
@@ -12,9 +14,9 @@ function Burst({ className }: { className?: string }) {
   )
 }
 
-function ConnectButton() {
+function ConnectButton({ label, url }: { label: string; url: string }) {
   return (
-    <a href="#contact" className="group relative block h-[443px] w-[677px]" aria-label="Connect">
+    <a href={url} className="group relative block h-[443px] w-[677px]" aria-label={label}>
       {/* pop marks — hidden until hover */}
       <div className="pointer-events-none absolute left-[5px] top-[72px] h-[130px] w-[130px] origin-bottom-right scale-50 opacity-0 transition-all duration-300 ease-out group-hover:scale-100 group-hover:opacity-100">
         <Burst className="h-full w-full" />
@@ -35,7 +37,7 @@ function ConnectButton() {
               <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-b from-[#ee8f63] to-[#d96b41] opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100" />
 
               <p className="absolute left-1/2 top-[20.11px] z-10 -translate-x-1/2 whitespace-nowrap bg-gradient-to-t from-white/80 to-white bg-clip-text text-center font-['Inter',sans-serif] text-[101.201px] font-medium leading-[121.441px] tracking-[-0.0156em] text-transparent">
-                Connect
+                {label}
               </p>
               <div className="pointer-events-none absolute inset-0 z-20 rounded-[inherit] shadow-[inset_0_-2.372px_0.791px_0_rgba(255,255,255,0.1),inset_0_9.488px_4.744px_0_rgba(0,0,0,0.1)]" />
             </div>
@@ -47,6 +49,14 @@ function ConnectButton() {
 }
 
 export function ConnectCta({ className = 'mt-[222px]' }: { className?: string }) {
+  const content = useContent()
+
+  /* Only the words come from the CMS. The gradient stack, the hover burst and
+     the scaling are the frontend's business. */
+  const note = content?.contactCta?.note ?? "Tap this 'tiny' button to highlight your product =)"
+  const label = content?.contactCta?.buttonLabel ?? 'Connect'
+  const url = content?.contactCta?.buttonUrl ?? '#contact'
+
   return (
     <section id="contact" className={`flex justify-center overflow-hidden px-6 ${className}`}>
       <div className="flex h-[238px] items-start sm:h-[325px] lg:h-[433px]">
@@ -54,10 +64,10 @@ export function ConnectCta({ className = 'mt-[222px]' }: { className?: string })
           <div className="flex h-[433px] w-[726px] flex-col items-center justify-center">
             <div className="-mb-[33px] h-[61px] w-[273px]">
               <p className="-rotate-[5deg] text-center font-hand text-[32px] font-bold leading-[30.72px] tracking-[-0.03125em] text-black/40 ">
-                Tap this 'tiny' button to highlight your product =)
+                {note}
               </p>
             </div>
-            <ConnectButton />
+            <ConnectButton label={label} url={url} />
           </div>
         </div>
       </div>

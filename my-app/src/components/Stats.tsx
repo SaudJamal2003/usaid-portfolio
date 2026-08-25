@@ -4,8 +4,20 @@ import client3 from '../assets/figma/client-3.png'
 import client4 from '../assets/figma/client-4.png'
 import client5 from '../assets/figma/client-5.png'
 import statusDot from '../assets/figma/status-dot.svg'
+import { useContent } from '../content/ContentProvider'
 
+/* Bundled fallbacks (§18). */
 const CLIENT_AVATARS = [client1, client2, client3, client4, client5]
+
+const FALLBACK_STATS = [
+  { value: '90%', caption: 'Return on investment', blurb: 'Earn back on your investment within 30 days' },
+  { value: '$2.5K+', caption: 'revenue Generated', blurb: 'Earn back on your investment within 30 days' },
+  {
+    value: '4.8/5',
+    caption: 'Trusted by clients',
+    blurb: 'I have delivered 50+ projects. helping service-based and product-based companies',
+  },
+]
 
 type MetricCardProps = {
   blurb: string
@@ -36,52 +48,63 @@ function MetricCard({
 }
 
 export function Stats() {
+  const content = useContent()
+
+  /* Content only. Card sizes, colours and the grid stay in this component --
+     the CMS supplies the numbers and the words. */
+  const cards = content?.stats?.length ? content.stats : FALLBACK_STATS
+  const avatars = content?.clientAvatars?.length
+    ? content.clientAvatars.map((a) => a.thumbUrl)
+    : CLIENT_AVATARS
+  const clientsLabel = content?.settings?.clientsLabel ?? '100+ Clients'
+  const availabilityLabel = content?.settings?.availabilityLabel ?? 'Available for new projects'
+
   return (
     <section className="mt-[1px] px-6 font-display">
       <div className="mx-auto grid w-full max-w-[1059px] grid-cols-1 items-start gap-[16px] sm:grid-cols-2 lg:grid-cols-[332px_332px_363px] lg:justify-center">
         <div className="flex flex-col gap-[17px]">
           <div className="flex items-center gap-[20px] rounded-[20px] bg-chip p-[24px]">
             <div className="flex items-center">
-              {CLIENT_AVATARS.map((avatar, index) => (
+              {avatars.map((avatar, index) => (
                 <img
                   key={avatar}
                   src={avatar}
                   alt=""
                   className={`size-[40.448px] rounded-full object-cover ${
-                    index < CLIENT_AVATARS.length - 1 ? '-mr-[16.06px]' : ''
+                    index < avatars.length - 1 ? '-mr-[16.06px]' : ''
                   }`}
                 />
               ))}
             </div>
-            <p className="text-[18px] capitalize leading-[1.119] text-black">100+ Clients</p>
+            <p className="text-[18px] capitalize leading-[1.119] text-black">{clientsLabel}</p>
           </div>
 
           <MetricCard
-            blurb="Earn back on your investment within 30 days"
-            value="90%"
-            caption="Return on investment"
+            blurb={cards[0]?.blurb ?? ''}
+            value={cards[0]?.value ?? ''}
+            caption={cards[0]?.caption ?? ''}
             className="h-[322px] bg-graphite"
           />
         </div>
 
         <div className="flex flex-col gap-[16px]">
           <MetricCard
-            blurb="Earn back on your investment within 30 days"
-            value="$2.5K+"
-            caption="revenue Generated"
+            blurb={cards[1]?.blurb ?? ''}
+            value={cards[1]?.value ?? ''}
+            caption={cards[1]?.caption ?? ''}
             className="h-[323px] bg-graphite"
           />
 
           <div className="flex h-[88px] items-center gap-[18px] rounded-[20px] bg-chip p-[24px]">
             <img src={statusDot} alt="" className="size-[10px]" />
-            <p className="text-[18px] capitalize leading-[1.119] text-black">Available for new projects</p>
+            <p className="text-[18px] capitalize leading-[1.119] text-black">{availabilityLabel}</p>
           </div>
         </div>
 
         <MetricCard
-          blurb="I have delivered 50+ projects. helping service-based and product-based companies"
-          value="4.8/5"
-          caption="Trusted by clients"
+          blurb={cards[2]?.blurb ?? ''}
+          value={cards[2]?.value ?? ''}
+          caption={cards[2]?.caption ?? ''}
           captionSize="text-[24px]"
           blurbClassName="leading-normal"
           className="h-[427px] bg-[#FF8E63] sm:col-span-2 lg:col-span-1"

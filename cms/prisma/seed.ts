@@ -116,6 +116,10 @@ async function main() {
   const workCricpr = await ingest('work-cricpr.png', 'CricPR project cover')
   const workSprinto = await ingest('work-sprinto.png', 'Sprinto project cover')
   const workKaroCar = await ingest('work-karo-car.png', 'Karo Car project cover')
+  const clientAvatars: (string | null)[] = []
+  for (let n = 1; n <= 5; n += 1) {
+    clientAvatars.push(await ingest(`client-${n}.png`, 'Client'))
+  }
   const jobLogos = [
     await ingest('job-1.png', 'Bytecorp Technologies logo'),
     await ingest('job-2.png', 'Codefied logo'),
@@ -135,6 +139,7 @@ async function main() {
         'Usaid Ahmed — product designer. Design is my favorite thing to overthink.',
       contactEmail: 'usaid.ahmedmay@gmail.com',
       availabilityLabel: 'Available for new projects',
+      clientsLabel: '100+ Clients',
       defaultSeoTitle: 'Usaid Ahmed - UX Designer',
       defaultSeoDesc:
         'Usaid Ahmed — product designer. Design is my favorite thing to overthink.',
@@ -161,6 +166,19 @@ async function main() {
       heading: 'Hi, myself Usaid! Andd...',
       bio: "I'm a UX Designer who loves turning confusion into clarity and friction into flow. I combine research, empathy, and systems thinking to create products people don't have to fight with.  Because the best interface isn't the one with the most animations. It's the one users never have to think about.",
       portraitId: aboutNote,
+    },
+  })
+
+  // The Connect block on the homepage. Only the words are content -- the
+  // button's gradients and hover burst stay in the frontend.
+  await db.contactCta.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: {
+      id: 'singleton',
+      note: "Tap this 'tiny' button to highlight your product =)",
+      buttonLabel: 'Connect',
+      buttonUrl: '#contact',
     },
   })
 
@@ -194,7 +212,15 @@ async function main() {
       create: { id: `social-${i}`, platform, url: '', visible: false, displayOrder: i },
     })
   }
-  console.log('  navigation + socials ready')
+  for (const [index, mediaId] of clientAvatars.entries()) {
+    if (!mediaId) continue
+    await db.clientAvatar.upsert({
+      where: { id: `client-avatar-${index}` },
+      update: {},
+      create: { id: `client-avatar-${index}`, mediaId, displayOrder: index },
+    })
+  }
+  console.log('  navigation + socials + client avatars ready')
 
   // ---- stats ------------------------------------------------------------
   const stats = [

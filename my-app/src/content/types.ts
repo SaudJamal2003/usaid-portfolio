@@ -75,6 +75,7 @@ export type CmsContent = {
     contactEmail: string
     location: string | null
     availabilityLabel: string | null
+    clientsLabel: string | null
   } | null
   hero: {
     eyebrow: string | null
@@ -84,6 +85,8 @@ export type CmsContent = {
   } | null
   about: { heading: string; bio: string; portrait: CmsMedia | null } | null
   footer: { email: string; description: string | null; copyright: string | null } | null
+  contactCta: { note: string | null; buttonLabel: string; buttonUrl: string } | null
+  clientAvatars: CmsMedia[]
   navigation: { label: string; url: string; openInNewTab: boolean }[]
   socials: { platform: string; url: string }[]
   stats: { value: string; caption: string; blurb: string | null }[]

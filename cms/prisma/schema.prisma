@@ -125,6 +125,7 @@ model Media {
   aboutPortraits      AboutContent[]
   settingsOgImages    SiteSettings[] @relation("SettingsOgImage")
   settingsFavicons    SiteSettings[] @relation("SettingsFavicon")
+  clientAvatars       ClientAvatar[]
 
   @@map("media")
 }
@@ -140,6 +141,8 @@ model SiteSettings {
   contactEmail      String
   location          String?
   availabilityLabel String?
+  // The "100+ Clients" chip beside the avatar stack on the homepage.
+  clientsLabel      String?
   defaultSeoTitle   String?
   defaultSeoDesc    String?
   ogImageId         String?
@@ -176,6 +179,18 @@ model AboutContent {
   updatedAt   DateTime @updatedAt
 
   @@map("about_content")
+}
+
+// The homepage's Connect block. The button's shape, gradients and hover burst
+// are the frontend's business; only the words are content.
+model ContactCta {
+  id          String   @id @default("singleton")
+  note        String?
+  buttonLabel String
+  buttonUrl   String
+  updatedAt   DateTime @updatedAt
+
+  @@map("contact_cta")
 }
 
 model FooterSettings {
@@ -215,6 +230,18 @@ model SocialLink {
 
   @@index([displayOrder])
   @@map("social_links")
+}
+
+// A real table rather than an array of ids on SiteSettings, so the media
+// delete guard can still see these references (§38).
+model ClientAvatar {
+  id           String @id @default(cuid())
+  mediaId      String
+  media        Media  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  displayOrder Int
+
+  @@index([displayOrder])
+  @@map("client_avatars")
 }
 
 model StatCard {
