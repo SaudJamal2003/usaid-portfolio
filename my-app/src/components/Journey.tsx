@@ -1,4 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useContent } from '../content/ContentProvider'
+import type { CmsExperience } from '../content/types'
 import connectorDown from '../assets/figma/connector-down.svg'
 import connectorUp from '../assets/figma/connector-up.svg'
 import job1 from '../assets/figma/job-1.png'
@@ -6,13 +8,18 @@ import job2 from '../assets/figma/job-2.png'
 import job3 from '../assets/figma/job-3.png'
 import job4 from '../assets/figma/job-4.png'
 
-const HIGHLIGHTS = [
+/* Bundled fallback bullets. These are Bytecorp's, and the portfolio has always
+   shown them under all four roles -- which is the bug the CMS fixes. They stay
+   here verbatim so the fallback render is byte-identical to what shipped. */
+const FALLBACK_HIGHLIGHTS = [
   'Own end to end product design across Resident App, ERP, Payments, Helpdesk, and Smart Devices.',
   'Led the design and launch of QuickPass, now used across 500+ societies with 28,000+ downloads.',
   'Redesigned the Helpdesk ecosystem and contributed to large scale payments and access control experiences.',
 ]
 
 type Role = {
+  /* Per-role, not shared. */
+  highlights: string[]
   title: string
   company: string
   location: string
@@ -26,8 +33,9 @@ type Role = {
   pill: { left: number; top: number; width: number; gap: number; place: 'above' | 'below' }
 }
 
-const ROLES: Role[] = [
+const FALLBACK_ROLES: Role[] = [
   {
+    highlights: FALLBACK_HIGHLIGHTS,
     title: 'Associate UX Designer',
     company: 'Bytecorp Technologies',
     location: 'KHI',
@@ -41,6 +49,7 @@ const ROLES: Role[] = [
     pill: { left: 144, top: 0, width: 139, gap: 5, place: 'above' },
   },
   {
+    highlights: FALLBACK_HIGHLIGHTS,
     title: 'UX Designer',
     company: 'Codefied',
     location: 'KHI',
@@ -54,6 +63,7 @@ const ROLES: Role[] = [
     pill: { left: 167, top: 423.33, width: 136, gap: 9, place: 'below' },
   },
   {
+    highlights: FALLBACK_HIGHLIGHTS,
     title: 'UX Designer',
     company: 'Techtree.io',
     location: 'KHI',
@@ -67,6 +77,7 @@ const ROLES: Role[] = [
     pill: { left: 170.43, top: 0, width: 136, gap: 6, place: 'above' },
   },
   {
+    highlights: FALLBACK_HIGHLIGHTS,
     title: 'UI/UX Designer Intern',
     company: 'Improdata',
     location: 'KHI',
@@ -129,7 +140,7 @@ function RoleCard({ role }: { role: Role }) {
       </div>
 
       <ul className="absolute left-[14px] top-[259px] w-[388px] -translate-y-1/2 space-y-[26px] font-display text-[17px] leading-normal text-graphite">
-        {HIGHLIGHTS.map((item) => (
+        {role.highlights.map((item) => (
           <li key={item} className="ms-[25.5px] list-disc">
             {item}
           </li>
@@ -313,6 +324,37 @@ function useScrollPinnedRail(active: boolean) {
   return { sectionRef, viewportRef, trackRef, travel }
 }
 
+/**
+ * CMS roles are used only when they are at least as good as what ships bundled.
+ *
+ * Three of the four roles have no real bullets yet, so publishing naively would
+ * drop the timeline from four cards to one -- a regression dressed up as a
+ * migration. Until the CMS set is complete, the bundled content stays.
+ */
+function isCmsExperienceComplete(entries: CmsExperience[]) {
+  return (
+    entries.length >= FALLBACK_ROLES.length &&
+    entries.every((entry) => entry.highlights.length > 0 && !entry.highlights.some((h) => h.startsWith('TODO')))
+  )
+}
+
+/* Geometry is the frontend's, not the CMS's: each card's rotation, connector
+   and pill placement come from the layout at that position. */
+function toRole(entry: CmsExperience, index: number): Role {
+  const layout = FALLBACK_ROLES[index % FALLBACK_ROLES.length]
+  return {
+    ...layout,
+    highlights: entry.highlights,
+    title: entry.role,
+    company: entry.company,
+    location: entry.location ?? '',
+    logo: entry.logo?.thumbUrl ?? layout.logo,
+    period: entry.isCurrent
+      ? { lead: `${entry.startDate}      -      `, accent: 'Present', tone: 'mint' }
+      : { lead: `${entry.startDate}      -      ${entry.endDate ?? ''}`, tone: 'sky' },
+  }
+}
+
 type JourneyProps = {
   /** section spacing — differs between the home page and the about page */
   className?: string
@@ -325,6 +367,9 @@ export function Journey({ className = 'mt-[175px]', align = 'left' }: JourneyPro
   // hook return that carries a ref trips react-hooks/refs during render.
   const { ref: dragRef, onPointerDown, onPointerMove, onPointerUp, onPointerLeave } =
     useDragScroll()
+  const content = useContent()
+  const cmsRoles = content?.experience ?? []
+  const ROLES = isCmsExperienceComplete(cmsRoles) ? cmsRoles.map(toRole) : FALLBACK_ROLES
   const isDesktop = useMediaQuery(subscribeToDesktop, DESKTOP)
   const prefersReducedMotion = useMediaQuery(subscribeToReducedMotion, REDUCED_MOTION)
   // Narrow screens keep the drag rail — there is no width there for a pin to
