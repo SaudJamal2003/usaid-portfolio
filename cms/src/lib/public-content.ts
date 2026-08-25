@@ -36,7 +36,7 @@ type MediaRow = {
 const asMedia = (row: MediaRow | null) => (row ? mediaPayload(row) : null)
 
 export async function buildPublicContent() {
-  const [settings, hero, about, footer, contactCta, clientAvatars, nav, socials, stats, experience, mentors, gallery, services, testimonials, projects, caseStudies] =
+  const [settings, hero, about, footer, contactCta, clientAvatars, nav, socials, stats, experience, mentors, gallery, services, testimonials, projects, caseStudies, seoRows] =
     await Promise.all([
       db.siteSettings.findUnique({
         where: { id: 'singleton' },
@@ -98,6 +98,7 @@ export async function buildPublicContent() {
         orderBy: { publishedAt: 'desc' },
         select: { slug: true, title: true, shortDescription: true, client: true },
       }),
+      db.seoMetadata.findMany({ include: { ogImage: { select: mediaSelect } } }),
     ])
 
   return {
@@ -176,6 +177,33 @@ export async function buildPublicContent() {
       caseStudySlug: p.caseStudy?.status === 'PUBLISHED' ? p.caseStudy.slug : null,
     })),
     caseStudies,
+    /* Resolved metadata, entity value then global default.
+       Stored and served, but NOT rendered per-route: hash routing means every
+       URL returns the same index.html, and social scrapers do not run JS. This
+       is here so a move to real paths is a wiring change. */
+    seo: (() => {
+      const byKey = new Map(seoRows.map((row) => [`${row.entityType}:${row.entityId}`, row]))
+      const globalOg = settings?.ogImage ? mediaPayload(settings.ogImage) : null
+      const resolve = (entityType: string, entityId: string) => {
+        const row = byKey.get(`${entityType}:${entityId}`)
+        return {
+          title: row?.title ?? settings?.defaultSeoTitle ?? null,
+          description: row?.description ?? settings?.defaultSeoDesc ?? null,
+          canonicalUrl: row?.canonicalUrl ?? null,
+          noIndex: row?.noIndex ?? false,
+          ogImage: row?.ogImage ? mediaPayload(row.ogImage) : globalOg,
+        }
+      }
+      return {
+        defaults: {
+          title: settings?.defaultSeoTitle ?? null,
+          description: settings?.defaultSeoDesc ?? null,
+          ogImage: globalOg,
+        },
+        homepage: resolve('homepage', 'singleton'),
+        byProjectSlug: Object.fromEntries(projects.map((p) => [p.slug, resolve('project', p.id)])),
+      }
+    })(),
   }
 }
 
@@ -234,6 +262,22 @@ export async function getCaseStudy(slug: string, options: { includeDrafts?: bool
     hero: asMedia(caseStudy.hero),
     thumbnail: asMedia(caseStudy.thumbnail),
     status: caseStudy.status,
+    seo: await (async () => {
+      const [row, settings] = await Promise.all([
+        db.seoMetadata.findUnique({
+          where: { entityType_entityId: { entityType: 'case_study', entityId: caseStudy.id } },
+          include: { ogImage: { select: mediaSelect } },
+        }),
+        db.siteSettings.findUnique({ where: { id: 'singleton' }, include: { ogImage: { select: mediaSelect } } }),
+      ])
+      return {
+        title: row?.title ?? settings?.defaultSeoTitle ?? null,
+        description: row?.description ?? settings?.defaultSeoDesc ?? null,
+        canonicalUrl: row?.canonicalUrl ?? null,
+        noIndex: row?.noIndex ?? false,
+        ogImage: row?.ogImage ? mediaPayload(row.ogImage) : settings?.ogImage ? mediaPayload(settings.ogImage) : null,
+      }
+    })(),
     blocks: await hydrateBlocks(caseStudy.blocks),
   }
 }

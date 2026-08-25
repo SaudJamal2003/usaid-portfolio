@@ -12,6 +12,8 @@ import { NEW_PROJECT_TITLE } from '@/lib/constants'
 import { slugify } from '@/lib/slug'
 import { MediaPicker } from './MediaPicker'
 import { TagInput } from './TagInput'
+import { SeoFields, SeoLimitationNotice, type SeoValues } from './SeoFields'
+import { saveSeo } from '@/app/admin/seo/actions'
 import { Alert, Button, Card, Field, Input, Select, StatusBadge, Textarea } from './ui'
 
 export type ProjectValues = {
@@ -31,23 +33,26 @@ export type ProjectValues = {
   caseStudyId: string
   featured: boolean
   status: string
-  seoTitle: string
-  seoDescription: string
-  seoNoIndex: boolean
 }
 
 export function ProjectForm({
   initial,
   caseStudies,
+  seo: initialSeo,
+  inheritedSeo,
 }: {
   initial: ProjectValues
   caseStudies: { id: string; title: string }[]
+  seo: SeoValues
+  inheritedSeo?: { title?: string | null; description?: string | null }
 }) {
   const router = useRouter()
   const [values, setValues] = useState(initial)
   const [dirty, setDirty] = useState(false)
   const [message, setMessage] = useState<{ tone: 'info' | 'error'; text: string } | null>(null)
   const [pending, startTransition] = useTransition()
+  const [seo, setSeo] = useState(initialSeo)
+  const [seoDirty, setSeoDirty] = useState(false)
 
   // A generated placeholder slug is not the same as one the user picked, so a
   // fresh draft still lets the title drive it.
@@ -272,32 +277,42 @@ export function ProjectForm({
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-sm font-semibold text-ink">SEO</h2>
-        <p className="mb-4 mt-1 text-xs text-muted">
-          Stored for later. The portfolio uses hash routing, so per-page metadata cannot reach a crawler
-          until it moves to real paths — these values are kept ready for that.
-        </p>
-        <div className="flex flex-col gap-4">
-          <Field label="SEO title">
-            <Input value={values.seoTitle} onChange={(e) => set('seoTitle', e.target.value)} />
-          </Field>
-          <Field label="SEO description">
-            <Textarea
-              rows={2}
-              value={values.seoDescription}
-              onChange={(e) => set('seoDescription', e.target.value)}
-            />
-          </Field>
-          <label className="flex items-center gap-2 text-sm text-ink-soft">
-            <input
-              type="checkbox"
-              checked={values.seoNoIndex}
-              onChange={(e) => set('seoNoIndex', e.target.checked)}
-              className="size-4 accent-[color:var(--color-accent-deep)]"
-            />
-            Ask search engines not to index this
-          </label>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">SEO</h2>
+            <p className="mt-0.5 text-xs text-muted">Blank fields inherit the global defaults.</p>
+          </div>
+          <Button
+            type="button"
+            disabled={pending || !seoDirty}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await saveSeo({
+                  entityType: 'project',
+                  entityId: values.id,
+                  ...seo,
+                  ogImageId: seo.ogImageId || null,
+                })
+                if (!result.ok) return setMessage({ tone: 'error', text: result.error })
+                setSeoDirty(false)
+                setMessage({ tone: 'info', text: 'SEO saved.' })
+              })
+            }
+          >
+            Save SEO
+          </Button>
         </div>
+        <div className="mb-4">
+          <SeoLimitationNotice />
+        </div>
+        <SeoFields
+          values={seo}
+          inherited={inheritedSeo}
+          onChange={(next) => {
+            setSeoDirty(true)
+            setSeo(next)
+          }}
+        />
       </Card>
     </div>
   )

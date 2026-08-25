@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { PageHeader } from '@/components/ui'
 import { HomepageEditor } from '@/components/HomepageEditor'
+import { EMPTY_SEO } from '@/components/SeoFields'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,10 @@ export default async function HomepagePage() {
     }),
     db.clientAvatar.findMany({ orderBy: { displayOrder: 'asc' }, select: { mediaId: true } }),
   ])
+
+  const seoRow = await db.seoMetadata.findUnique({
+    where: { entityType_entityId: { entityType: 'homepage', entityId: 'singleton' } },
+  })
 
   const text = (value: string | null | undefined) => value ?? ''
 
@@ -53,6 +58,18 @@ export default async function HomepagePage() {
         }}
         featured={featured}
         clientAvatarIds={avatars.map((a) => a.mediaId)}
+        seo={
+          seoRow
+            ? {
+                title: seoRow.title ?? '',
+                description: seoRow.description ?? '',
+                canonicalUrl: seoRow.canonicalUrl ?? '',
+                noIndex: seoRow.noIndex,
+                ogImageId: seoRow.ogImageId ?? '',
+              }
+            : EMPTY_SEO
+        }
+        inheritedSeo={{ title: settings?.defaultSeoTitle, description: settings?.defaultSeoDesc }}
       />
     </>
   )

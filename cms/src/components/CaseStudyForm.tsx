@@ -12,6 +12,8 @@ import {
 import { NEW_DRAFT_TITLE } from '@/lib/constants'
 import { slugify } from '@/lib/slug'
 import { MediaPicker } from './MediaPicker'
+import { SeoFields, SeoLimitationNotice, type SeoValues } from './SeoFields'
+import { saveSeo } from '@/app/admin/seo/actions'
 import { Alert, Button, Card, Field, Input, StatusBadge, Textarea } from './ui'
 
 export type CaseStudyValues = {
@@ -38,12 +40,22 @@ export type CaseStudyValues = {
 
 const PORTFOLIO_URL = process.env.NEXT_PUBLIC_PORTFOLIO_URL ?? 'http://localhost:5173'
 
-export function CaseStudyForm({ initial }: { initial: CaseStudyValues }) {
+export function CaseStudyForm({
+  initial,
+  seo: initialSeo,
+  inheritedSeo,
+}: {
+  initial: CaseStudyValues
+  seo: SeoValues
+  inheritedSeo?: { title?: string | null; description?: string | null }
+}) {
   const router = useRouter()
   const [values, setValues] = useState(initial)
   const [dirty, setDirty] = useState(false)
   const [message, setMessage] = useState<{ tone: 'info' | 'error'; text: string } | null>(null)
   const [pending, startTransition] = useTransition()
+  const [seo, setSeo] = useState(initialSeo)
+  const [seoDirty, setSeoDirty] = useState(false)
 
   /* Slug follows the title only while it has not been hand-edited (§14).
      A brand-new draft carries a generated placeholder slug, which is not the
@@ -211,6 +223,45 @@ export function CaseStudyForm({ initial }: { initial: CaseStudyValues }) {
             Featured
           </label>
         </div>
+      </Card>
+
+      <Card className="p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">SEO</h2>
+            <p className="mt-0.5 text-xs text-muted">Blank fields inherit the global defaults.</p>
+          </div>
+          <Button
+            type="button"
+            disabled={pending || !seoDirty}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await saveSeo({
+                  entityType: 'case_study',
+                  entityId: values.id,
+                  ...seo,
+                  ogImageId: seo.ogImageId || null,
+                })
+                if (!result.ok) return setMessage({ tone: 'error', text: result.error })
+                setSeoDirty(false)
+                setMessage({ tone: 'info', text: 'SEO saved.' })
+              })
+            }
+          >
+            Save SEO
+          </Button>
+        </div>
+        <div className="mb-4">
+          <SeoLimitationNotice />
+        </div>
+        <SeoFields
+          values={seo}
+          inherited={inheritedSeo}
+          onChange={(next) => {
+            setSeoDirty(true)
+            setSeo(next)
+          }}
+        />
       </Card>
 
       <Card className="p-5">

@@ -11,6 +11,8 @@ import {
 } from '@/app/admin/homepage/actions'
 import { MediaPicker } from './MediaPicker'
 import { TagInput } from './TagInput'
+import { SeoFields, SeoLimitationNotice, type SeoValues } from './SeoFields'
+import { saveSeo } from '@/app/admin/seo/actions'
 import { Alert, Button, Card, Field, Input, StatusBadge, Textarea } from './ui'
 
 /* One panel per section that actually exists on the homepage. Deliberately not
@@ -86,12 +88,16 @@ export function HomepageEditor({
   cta,
   featured,
   clientAvatarIds,
+  seo: initialSeo,
+  inheritedSeo,
 }: {
   hero: HeroValues
   stats: StatsValues
   cta: CtaValues
   featured: FeaturedProject[]
   clientAvatarIds: string[]
+  seo: SeoValues
+  inheritedSeo?: { title?: string | null; description?: string | null }
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -109,6 +115,10 @@ export function HomepageEditor({
   const [ctaMessage, setCtaMessage] = useState<{ tone: 'info' | 'error'; text: string } | null>(null)
 
   const [avatars, setAvatars] = useState(clientAvatarIds)
+
+  const [seo, setSeo] = useState(initialSeo)
+  const [seoDirty, setSeoDirty] = useState(false)
+  const [seoMessage, setSeoMessage] = useState<{ tone: 'info' | 'error'; text: string } | null>(null)
 
   function run(
     action: () => Promise<{ ok: boolean; error?: string }>,
@@ -363,6 +373,39 @@ export function HomepageEditor({
             </p>
           </>
         )}
+      </Section>
+
+      <Section
+        title="SEO"
+        description="Metadata for the home page. Blank fields inherit the global defaults."
+        dirty={seoDirty}
+        saving={pending}
+        message={seoMessage}
+        onSave={() =>
+          run(
+            () =>
+              saveSeo({
+                entityType: 'homepage',
+                entityId: 'singleton',
+                ...seo,
+                ogImageId: seo.ogImageId || null,
+              }),
+            setSeoMessage,
+            () => setSeoDirty(false),
+          )
+        }
+      >
+        <div className="mb-4">
+          <SeoLimitationNotice />
+        </div>
+        <SeoFields
+          values={seo}
+          inherited={inheritedSeo}
+          onChange={(next) => {
+            setSeoDirty(true)
+            setSeo(next)
+          }}
+        />
       </Section>
 
       <Section

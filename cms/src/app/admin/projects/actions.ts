@@ -39,17 +39,6 @@ const detailsSchema = z.object({
   heroId: z.string().cuid().nullable().optional(),
   caseStudyId: z.string().cuid().nullable().optional(),
   featured: z.boolean().default(false),
-  // SEO is stored now and consumed once the portfolio can serve per-page
-  // metadata; hash routing cannot today (§14).
-  seoTitle: optionalText,
-  seoDescription: z
-    .string()
-    .trim()
-    .max(500)
-    .optional()
-    .or(z.literal(''))
-    .transform((v) => v || null),
-  seoNoIndex: z.boolean().default(false),
 })
 
 export async function createProject() {
@@ -86,7 +75,7 @@ export async function saveProject(input: unknown) {
   const parsed = detailsSchema.safeParse(input)
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0].message }
 
-  const { id, seoTitle, seoDescription, seoNoIndex, ...data } = parsed.data
+  const { id, ...data } = parsed.data
   data.slug = slugify(data.slug) || slugify(data.title)
 
   const clash = await db.project.findFirst({ where: { slug: data.slug, NOT: { id } } })
@@ -105,20 +94,6 @@ export async function saveProject(input: unknown) {
   }
 
   await db.project.update({ where: { id }, data })
-
-  if (seoTitle || seoDescription || seoNoIndex) {
-    await db.seoMetadata.upsert({
-      where: { entityType_entityId: { entityType: 'project', entityId: id } },
-      update: { title: seoTitle, description: seoDescription, noIndex: seoNoIndex },
-      create: {
-        entityType: 'project',
-        entityId: id,
-        title: seoTitle,
-        description: seoDescription,
-        noIndex: seoNoIndex,
-      },
-    })
-  }
 
   await logActivity({
     userId: user.id,
