@@ -120,12 +120,18 @@ function ProjectCard({ project }: { project: Project }) {
 export function Work() {
   const content = useContent()
 
-  /* CMS projects when there are any, otherwise the bundled list. The rows keep
-     their Figma column ratios, so the grid geometry is unchanged either way --
-     the CMS supplies content, never layout. */
+  /* Featured projects, in the order the CMS sets, otherwise the bundled list.
+     Falls back to all published projects if nothing is marked featured, so the
+     section can never empty itself just because the flag was cleared.
+
+     The rows keep their Figma column ratios, so the grid geometry is unchanged
+     either way -- the CMS supplies content, never layout. */
+  const fromCms = content?.projects.filter((project) => project.featured) ?? []
+  const cmsProjects = fromCms.length > 0 ? fromCms : (content?.projects ?? [])
+
   const projects: Project[] =
-    content && content.projects.length > 0
-      ? content.projects.map((project) => ({
+    cmsProjects.length > 0
+      ? cmsProjects.map((project) => ({
           name: project.title,
           description: project.shortDescription ?? '',
           cover: project.thumbnail?.mediumUrl ?? project.thumbnail?.url ?? '',
