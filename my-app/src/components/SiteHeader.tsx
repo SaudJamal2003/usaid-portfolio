@@ -1,5 +1,5 @@
 import logo from "../assets/figma/logo.svg";
-import { useContent } from "../content/ContentProvider";
+import { useContent } from "../content/context";
 import navDot from "../assets/figma/nav-dot.svg";
 
 /* Bundled fallback (§18). */

@@ -4,7 +4,7 @@ import client3 from '../assets/figma/client-3.png'
 import client4 from '../assets/figma/client-4.png'
 import client5 from '../assets/figma/client-5.png'
 import statusDot from '../assets/figma/status-dot.svg'
-import { useContent } from '../content/ContentProvider'
+import { useContent } from '../content/context'
 
 /* Bundled fallbacks (§18). */
 const CLIENT_AVATARS = [client1, client2, client3, client4, client5]

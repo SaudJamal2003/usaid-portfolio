@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useContent } from '../content/ContentProvider'
+import { useContent } from '../content/context'
 import copyIcon from '../assets/figma/copy-icon.svg'
 import socialX from '../assets/figma/social-1.png'
 import socialInstagram from '../assets/figma/social-2.png'

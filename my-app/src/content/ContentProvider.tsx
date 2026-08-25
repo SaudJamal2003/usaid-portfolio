@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { looksLikeContent, type CmsContent } from './types'
+import { ContentContext, type ContentState } from './context'
+import { looksLikeContent } from './types'
 
 /**
  * Fetches published CMS content once, at mount.
@@ -18,24 +19,19 @@ import { looksLikeContent, type CmsContent } from './types'
 const API_BASE = import.meta.env.VITE_CMS_URL ?? ''
 const TIMEOUT_MS = 2500
 
-type ContentState = {
-  content: CmsContent | null
-  /** false until the request settles either way; useful for debugging, not for gating render. */
-  settled: boolean
-}
-
-const ContentContext = createContext<ContentState>({ content: null, settled: false })
-
 export function ContentProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<ContentState>({ content: null, settled: false })
+  /* Seeded rather than set from inside the effect: with no CMS configured there
+     is nothing to wait for, and calling setState in an effect body just to say
+     so costs a second render pass. */
+  const [state, setState] = useState<ContentState>(() => ({
+    content: null,
+    settled: !API_BASE,
+  }))
 
   useEffect(() => {
-    // No CMS configured (the default for a plain `npm run dev`): stay on
-    // bundled content and never make a request.
-    if (!API_BASE) {
-      setState({ content: null, settled: true })
-      return
-    }
+    // No CMS configured (the default for a plain `npm run dev`): stay on bundled
+    // content and never make a request.
+    if (!API_BASE) return
 
     const controller = new AbortController()
     const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -55,32 +51,4 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return <ContentContext.Provider value={state}>{children}</ContentContext.Provider>
-}
-
-export function useContent() {
-  return useContext(ContentContext).content
-}
-
-/**
- * Picks CMS data when it is actually usable, otherwise the bundled fallback.
- *
- * The emptiness check matters: several collections are deliberately incomplete
- * in the CMS right now because the seed refused to invent copy, and an empty
- * array must not blank a section that currently renders fine from bundled
- * content (§55). Fallbacks come out per module, once that module's content has
- * been completed and verified.
- */
-export function useCollection<T>(select: (content: CmsContent) => T[] | undefined, fallback: T[]): T[] {
-  const content = useContent()
-  if (!content) return fallback
-  const value = select(content)
-  return value && value.length > 0 ? value : fallback
-}
-
-/** Same idea for a single value. */
-export function useValue<T>(select: (content: CmsContent) => T | null | undefined, fallback: T): T {
-  const content = useContent()
-  if (!content) return fallback
-  const value = select(content)
-  return value ?? fallback
 }

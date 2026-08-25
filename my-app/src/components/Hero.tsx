@@ -7,7 +7,7 @@ import doodleBlob from '../assets/figma/hero-doodle-blob.png'
 import doodleCar from '../assets/figma/hero-doodle-car.png'
 import portraitFallback from '../assets/figma/hero-portrait.png'
 import { TypingWord } from './TypingWord'
-import { useContent } from '../content/ContentProvider'
+import { useContent } from '../content/context'
 
 /* Cycle through on a shared 700ms timeline (100ms per doodle, see
    hero-doodle-cycle in index.css) — one flashes in, holds briefly, flashes

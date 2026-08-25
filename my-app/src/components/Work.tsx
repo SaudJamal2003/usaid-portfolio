@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useContent } from '../content/ContentProvider'
+import { useContent } from '../content/context'
 import arrow from '../assets/figma/arrow.svg'
 import teaser from '../assets/figma/work-teaser.png'
 import cricpr from '../assets/figma/work-cricpr.png'

@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { useContent } from '../content/ContentProvider'
+import { useContent } from '../content/context'
 import type { CmsExperience } from '../content/types'
 import connectorDown from '../assets/figma/connector-down.svg'
 import connectorUp from '../assets/figma/connector-up.svg'

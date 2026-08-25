@@ -1,4 +1,4 @@
-import { useContent } from '../content/ContentProvider'
+import { useContent } from '../content/context'
 
 /* The Connect button is a stack of gradient shells, reproduced at the Figma
    dimensions and scaled down as a unit on narrow screens. */

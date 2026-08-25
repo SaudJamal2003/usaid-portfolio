@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { useContent } from '../content/ContentProvider'
+import { useContent } from '../content/context'
 import type { CmsMentor } from '../content/types'
 import mentorMain from '../assets/figma/mentor-main.png'
 import mentorSecond from '../assets/figma/mentor-polaroid-2.png'

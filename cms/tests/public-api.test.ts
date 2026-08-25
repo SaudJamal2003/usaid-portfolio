@@ -1,0 +1,217 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { db } from '@/lib/db'
+import { buildPublicContent, getCaseStudy } from '@/lib/public-content'
+import { findMediaReferences } from '@/lib/media'
+import { resolveSeo } from '@/lib/seo'
+import { checkLoginRate, clearLoginAttempts, recordFailedLogin } from '@/lib/rate-limit'
+
+/**
+ * The invariants that protect the live site.
+ *
+ * These run against the dev database and create their own rows, all prefixed
+ * so they are identifiable and removable. Seeded content is read but never
+ * modified.
+ */
+
+const TAG = '__test__'
+const ids: { caseStudies: string[]; projects: string[]; media: string[]; mentors: string[] } = {
+  caseStudies: [],
+  projects: [],
+  media: [],
+  mentors: [],
+}
+
+beforeAll(async () => {
+  const draftCs = await db.caseStudy.create({
+    data: {
+      title: `${TAG} draft case study`,
+      slug: `${TAG}-draft-cs`,
+      status: 'DRAFT',
+      shortDescription: 'should never be public',
+    },
+  })
+  const publishedCs = await db.caseStudy.create({
+    data: {
+      title: `${TAG} published case study`,
+      slug: `${TAG}-published-cs`,
+      status: 'PUBLISHED',
+      publishedAt: new Date(),
+    },
+  })
+  const archivedCs = await db.caseStudy.create({
+    data: { title: `${TAG} archived`, slug: `${TAG}-archived-cs`, status: 'ARCHIVED' },
+  })
+  ids.caseStudies.push(draftCs.id, publishedCs.id, archivedCs.id)
+
+  const media = await db.media.create({
+    data: {
+      storageKey: `${TAG}/key.png`,
+      originalFilename: `${TAG}.png`,
+      mimeType: 'image/png',
+      size: 1234,
+    },
+  })
+  ids.media.push(media.id)
+
+  const draftProject = await db.project.create({
+    data: { title: `${TAG} draft project`, slug: `${TAG}-draft-p`, status: 'DRAFT', displayOrder: 900 },
+  })
+  const publishedProject = await db.project.create({
+    data: {
+      title: `${TAG} published project`,
+      slug: `${TAG}-published-p`,
+      status: 'PUBLISHED',
+      displayOrder: 901,
+      featured: true,
+      thumbnailId: media.id,
+    },
+  })
+  ids.projects.push(draftProject.id, publishedProject.id)
+
+  const draftMentor = await db.mentor.create({
+    data: { name: `${TAG} draft mentor`, role: 'x', tribute: 'x', status: 'DRAFT', displayOrder: 900 },
+  })
+  ids.mentors.push(draftMentor.id)
+})
+
+afterAll(async () => {
+  await db.caseStudyBlock.deleteMany({ where: { caseStudyId: { in: ids.caseStudies } } })
+  await db.project.deleteMany({ where: { id: { in: ids.projects } } })
+  await db.caseStudy.deleteMany({ where: { id: { in: ids.caseStudies } } })
+  await db.mentor.deleteMany({ where: { id: { in: ids.mentors } } })
+  await db.seoMetadata.deleteMany({ where: { entityId: { in: [...ids.caseStudies, ...ids.projects] } } })
+  await db.media.deleteMany({ where: { id: { in: ids.media } } })
+  await db.loginAttempt.deleteMany({ where: { email: { contains: TAG } } })
+  await db.$disconnect()
+})
+
+describe('draft isolation', () => {
+  it('the public payload contains no draft or archived content at all', async () => {
+    const content = await buildPublicContent()
+    const everything = JSON.stringify(content)
+
+    expect(everything).not.toContain(`${TAG} draft case study`)
+    expect(everything).not.toContain(`${TAG} archived`)
+    expect(everything).not.toContain(`${TAG} draft project`)
+    expect(everything).not.toContain(`${TAG} draft mentor`)
+
+    // and the published ones are present, so the filter is not simply excluding everything
+    expect(everything).toContain(`${TAG} published project`)
+  })
+
+  it('a draft case study is not retrievable by slug', async () => {
+    expect(await getCaseStudy(`${TAG}-draft-cs`)).toBeNull()
+  })
+
+  it('an archived case study is not retrievable by slug', async () => {
+    expect(await getCaseStudy(`${TAG}-archived-cs`)).toBeNull()
+  })
+
+  it('a published case study is retrievable', async () => {
+    const result = await getCaseStudy(`${TAG}-published-cs`)
+    expect(result?.slug).toBe(`${TAG}-published-cs`)
+  })
+
+  it('drafts are reachable only through the explicit preview flag', async () => {
+    const withoutFlag = await getCaseStudy(`${TAG}-draft-cs`)
+    const withFlag = await getCaseStudy(`${TAG}-draft-cs`, { includeDrafts: true })
+    expect(withoutFlag).toBeNull()
+    expect(withFlag?.status).toBe('DRAFT')
+  })
+
+  it('no TODO placeholder text ever reaches the public payload', async () => {
+    const content = await buildPublicContent()
+    expect(JSON.stringify(content)).not.toMatch(/TODO —/)
+  })
+})
+
+describe('projects in the public payload', () => {
+  it('carries the featured flag and display order the homepage needs', async () => {
+    const { projects } = await buildPublicContent()
+    const mine = projects.find((p) => p.slug === `${TAG}-published-p`)
+    expect(mine?.featured).toBe(true)
+    expect(mine?.thumbnail).not.toBeNull()
+  })
+
+  it('only links a project to its case study when that study is itself published', async () => {
+    const draftCsId = ids.caseStudies[0]
+    await db.project.update({ where: { id: ids.projects[1] }, data: { caseStudyId: draftCsId } })
+
+    const { projects } = await buildPublicContent()
+    const mine = projects.find((p) => p.slug === `${TAG}-published-p`)
+    expect(mine?.caseStudySlug).toBeNull()
+
+    await db.project.update({ where: { id: ids.projects[1] }, data: { caseStudyId: null } })
+  })
+})
+
+describe('media reference protection', () => {
+  it('reports where an asset is used', async () => {
+    const refs = await findMediaReferences(ids.media[0])
+    expect(refs.length).toBeGreaterThan(0)
+    expect(refs.some((r) => r.where === 'Project')).toBe(true)
+  })
+
+  it('finds references hidden inside case study block JSON', async () => {
+    const block = await db.caseStudyBlock.create({
+      data: {
+        caseStudyId: ids.caseStudies[1],
+        type: 'IMAGE',
+        data: { mediaId: ids.media[0] },
+        displayOrder: 0,
+      },
+    })
+    const refs = await findMediaReferences(ids.media[0])
+    expect(refs.some((r) => r.where.startsWith('Case study block'))).toBe(true)
+    await db.caseStudyBlock.delete({ where: { id: block.id } })
+  })
+
+  it('reports nothing for an unreferenced asset', async () => {
+    const orphan = await db.media.create({
+      data: {
+        storageKey: `${TAG}/orphan.png`,
+        originalFilename: `${TAG}-orphan.png`,
+        mimeType: 'image/png',
+        size: 10,
+      },
+    })
+    expect(await findMediaReferences(orphan.id)).toHaveLength(0)
+    await db.media.delete({ where: { id: orphan.id } })
+  })
+})
+
+describe('SEO resolution', () => {
+  it('falls back to the global default when an entity has none', async () => {
+    const resolved = await resolveSeo('case_study', ids.caseStudies[1])
+    const settings = await db.siteSettings.findUnique({ where: { id: 'singleton' } })
+    expect(resolved.title).toBe(settings?.defaultSeoTitle ?? null)
+    expect(resolved.source.title).toBe('global')
+  })
+
+  it('prefers the entity value over the global one', async () => {
+    await db.seoMetadata.create({
+      data: { entityType: 'case_study', entityId: ids.caseStudies[1], title: `${TAG} own title` },
+    })
+    const resolved = await resolveSeo('case_study', ids.caseStudies[1])
+    expect(resolved.title).toBe(`${TAG} own title`)
+    expect(resolved.source.title).toBe('entity')
+  })
+})
+
+describe('login throttling', () => {
+  const email = `${TAG}@example.com`
+  const ip = '203.0.113.9'
+
+  it('allows attempts under the limit and blocks past it', async () => {
+    await clearLoginAttempts(email)
+    expect((await checkLoginRate(email, ip)).allowed).toBe(true)
+
+    for (let n = 0; n < 8; n += 1) await recordFailedLogin(email, ip)
+    expect((await checkLoginRate(email, ip)).allowed).toBe(false)
+  })
+
+  it('clears on a successful login', async () => {
+    await clearLoginAttempts(email)
+    expect((await checkLoginRate(email, ip)).allowed).toBe(true)
+  })
+})
