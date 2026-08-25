@@ -96,7 +96,8 @@ function BlockFields({
         <>
           <MediaPicker
             label="Video file"
-            accept="video/mp4"
+            kind="video"
+            accept="video/mp4,video/webm"
             value={text('mediaId')}
             onChange={(id) => set('mediaId', id)}
           />

@@ -1,51 +1,66 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
-import { uploadMediaAction } from '@/app/admin/media/actions'
-import { Alert, Button, Input } from './ui'
+import { useCallback, useEffect, useState } from 'react'
+import type { MediaDetail } from '@/lib/media'
+import { formatBytes } from '@/lib/upload-policy'
+import { useUpload } from './useUpload'
+import { UploadDropzone } from './UploadDropzone'
+import { Alert, Button, Input, Select } from './ui'
 
-export type PickerMedia = {
-  id: string
-  url: string
-  thumbUrl: string
-  alt: string
-  mimeType: string
-}
-
-/* Every image field offers both paths (§22). The dialog is a plain overlay
-   rather than a dependency; it traps nothing but does close on Escape and on
-   backdrop click, which is the accessible minimum for this. */
+/**
+ * The one media selector. Every image field in the CMS uses it — case studies,
+ * projects, homepage, experience, testimonials, services, SEO — so behaviour
+ * stays identical everywhere and new content types get it for free.
+ *
+ * Both paths the brief asks for: choose something existing, or upload and have
+ * it immediately selectable.
+ */
 export function MediaPicker({
   value,
   onChange,
   label = 'Image',
-  accept = 'image/*',
+  accept,
   multiple = false,
+  kind,
 }: {
   value?: string | string[]
   onChange: (id: string | string[]) => void
   label?: string
   accept?: string
   multiple?: boolean
+  /** Restricts the browse filter, e.g. 'video' for a video field. */
+  kind?: 'image' | 'video' | 'document'
 }) {
   const [open, setOpen] = useState(false)
-  const [library, setLibrary] = useState<PickerMedia[]>([])
+  const [library, setLibrary] = useState<MediaDetail[]>([])
+  const [preview, setPreview] = useState<MediaDetail[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [pending, startTransition] = useTransition()
+  const [sort, setSort] = useState('newest')
 
   const selectedIds = Array.isArray(value) ? value : value ? [value] : []
+  const key = selectedIds.join(',')
+
+  const loadLibrary = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({ q: query, sort, perPage: '60' })
+      if (kind) params.set('kind', kind)
+      const response = await fetch(`/api/admin/media?${params}`)
+      if (!response.ok) throw new Error()
+      setLibrary((await response.json()).media)
+    } catch {
+      setError('Could not load the media library.')
+    } finally {
+      setLoading(false)
+    }
+  }, [query, sort, kind])
 
   useEffect(() => {
-    if (!open) return
-    setLoading(true)
-    fetch('/api/admin/media')
-      .then((r) => r.json())
-      .then((data) => setLibrary(data.media ?? []))
-      .catch(() => setError('Could not load the media library.'))
-      .finally(() => setLoading(false))
-  }, [open])
+    if (open) void loadLibrary()
+  }, [open, loadLibrary])
 
   useEffect(() => {
     if (!open) return
@@ -54,53 +69,52 @@ export function MediaPicker({
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  const selected = library.filter((m) => selectedIds.includes(m.id))
-  const [preview, setPreview] = useState<PickerMedia[]>([])
-
-  // Keep a preview even before the library has been opened once.
+  /* Resolved by id rather than read out of the browse list, so the current
+     selection still previews when it is archived or on another page. */
   useEffect(() => {
-    if (selectedIds.length === 0) return setPreview([])
-    if (selected.length === selectedIds.length) return setPreview(selected)
-    fetch(`/api/admin/media?ids=${selectedIds.join(',')}`)
+    if (!key) return setPreview([])
+    let cancelled = false
+    fetch(`/api/admin/media?ids=${key}`)
       .then((r) => r.json())
-      .then((data) => setPreview(data.media ?? []))
+      .then((data) => !cancelled && setPreview(data.media ?? []))
       .catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, library])
+    return () => {
+      cancelled = true
+    }
+  }, [key])
 
-  function choose(media: PickerMedia) {
+  const { items: uploads, upload, clearFinished } = useUpload()
+
+  async function onFiles(files: File[]) {
+    const uploaded: string[] = []
+    for (const file of files) {
+      const result = await upload(file)
+      if (result.ok) uploaded.push(result.id)
+    }
+    if (uploaded.length === 0) return
+
+    await loadLibrary()
+    // Immediately selectable, as the brief requires.
     if (multiple) {
-      const next = selectedIds.includes(media.id)
-        ? selectedIds.filter((id) => id !== media.id)
-        : [...selectedIds, media.id]
-      onChange(next)
+      onChange([...selectedIds, ...uploaded])
+    } else {
+      onChange(uploaded[0])
+      setOpen(false)
+    }
+  }
+
+  function choose(media: MediaDetail) {
+    if (multiple) {
+      onChange(
+        selectedIds.includes(media.id)
+          ? selectedIds.filter((id) => id !== media.id)
+          : [...selectedIds, media.id],
+      )
     } else {
       onChange(media.id)
       setOpen(false)
     }
   }
-
-  function upload(file: File) {
-    const data = new FormData()
-    data.set('file', file)
-    startTransition(async () => {
-      const result = await uploadMediaAction(data)
-      if (!result.ok) return setError(result.error)
-      setError(null)
-      const refreshed = await fetch('/api/admin/media').then((r) => r.json())
-      setLibrary(refreshed.media ?? [])
-      if (!multiple) {
-        onChange(result.id)
-        setOpen(false)
-      } else {
-        onChange([...selectedIds, result.id])
-      }
-    })
-  }
-
-  const filtered = query
-    ? library.filter((m) => m.alt.toLowerCase().includes(query.toLowerCase()))
-    : library
 
   return (
     <div>
@@ -110,18 +124,22 @@ export function MediaPicker({
         <div className="mb-2 flex flex-wrap gap-2">
           {preview.map((media) => (
             <div key={media.id} className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={media.thumbUrl}
-                alt={media.alt}
-                className="size-24 rounded-lg border border-line object-cover"
-              />
+              {media.kind === 'image' ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={media.thumbUrl}
+                  alt={media.alt}
+                  className="size-24 rounded-lg border border-line object-cover"
+                />
+              ) : (
+                <span className="grid size-24 place-items-center rounded-lg border border-line bg-surface text-xs text-muted">
+                  {media.extension}
+                </span>
+              )}
               <button
                 type="button"
-                onClick={() =>
-                  onChange(multiple ? selectedIds.filter((id) => id !== media.id) : '')
-                }
-                aria-label={`Remove ${media.alt || 'image'}`}
+                onClick={() => onChange(multiple ? selectedIds.filter((id) => id !== media.id) : '')}
+                aria-label={`Remove ${media.name}`}
                 className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full border border-line bg-raised text-xs text-muted hover:text-danger"
               >
                 ×
@@ -130,16 +148,14 @@ export function MediaPicker({
           ))}
         </div>
       ) : (
-        <div className="mb-2 grid h-24 w-24 place-items-center rounded-lg border border-dashed border-line-strong text-xs text-faint">
+        <div className="mb-2 grid size-24 place-items-center rounded-lg border border-dashed border-line-strong text-xs text-faint">
           None
         </div>
       )}
 
-      <div className="flex gap-2">
-        <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
-          {preview.length ? 'Change' : 'Choose from library'}
-        </Button>
-      </div>
+      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+        {preview.length ? 'Change' : 'Choose or upload'}
+      </Button>
 
       {open && (
         <div
@@ -149,65 +165,77 @@ export function MediaPicker({
           aria-label="Media library"
           onClick={(e) => e.target === e.currentTarget && setOpen(false)}
         >
-          <div className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl border border-line bg-raised">
-            <div className="flex items-center gap-3 border-b border-line p-4">
+          <div className="flex max-h-[88vh] w-full max-w-3xl flex-col rounded-xl border border-line bg-raised">
+            <div className="flex items-center gap-2 border-b border-line p-4">
               <Input
                 autoFocus
-                placeholder="Search by alt text…"
+                placeholder="Search media…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="flex-1"
               />
-              <label className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-line-strong px-3.5 text-sm font-medium hover:bg-surface">
-                {pending ? 'Uploading…' : 'Upload new'}
-                <input
-                  type="file"
-                  accept={accept}
-                  className="sr-only"
-                  onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
-                />
-              </label>
+              <Select value={sort} onChange={(e) => setSort(e.target.value)} className="w-auto">
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="name">Name</option>
+              </Select>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 Close
               </Button>
             </div>
 
+            <div className="border-b border-line p-4">
+              <UploadDropzone compact onFiles={onFiles} items={uploads} onClear={clearFinished} accept={accept} />
+            </div>
+
             {error && (
               <div className="p-4">
-                <Alert tone="error">{error}</Alert>
+                <Alert tone="error">
+                  {error}{' '}
+                  <button type="button" onClick={loadLibrary} className="font-medium underline">
+                    Retry
+                  </button>
+                </Alert>
               </div>
             )}
 
             <div className="grid flex-1 grid-cols-3 gap-3 overflow-y-auto p-4 sm:grid-cols-4 md:grid-cols-5">
-              {loading && <p className="col-span-full py-8 text-center text-sm text-muted">Loading…</p>}
-              {!loading && filtered.length === 0 && (
-                <p className="col-span-full py-8 text-center text-sm text-muted">
-                  Nothing here yet. Upload a file to get started.
+              {loading &&
+                Array.from({ length: 10 }).map((_, index) => (
+                  <div key={index} className="aspect-square animate-pulse rounded-lg bg-surface" />
+                ))}
+
+              {!loading && library.length === 0 && (
+                <p className="col-span-full py-10 text-center text-sm text-muted">
+                  {query ? 'Nothing matches that search.' : 'No media yet — upload something above.'}
                 </p>
               )}
-              {filtered.map((media) => {
-                const active = selectedIds.includes(media.id)
-                return (
-                  <button
-                    key={media.id}
-                    type="button"
-                    onClick={() => choose(media)}
-                    aria-pressed={active}
-                    className={`overflow-hidden rounded-lg border-2 transition-colors ${
-                      active ? 'border-accent-deep' : 'border-transparent hover:border-line-strong'
-                    }`}
-                  >
-                    {media.mimeType.startsWith('image/') ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={media.thumbUrl} alt={media.alt} className="aspect-square w-full object-cover" />
-                    ) : (
-                      <span className="grid aspect-square w-full place-items-center bg-surface text-[10px] text-muted">
-                        {media.mimeType.split('/')[1]}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
+
+              {!loading &&
+                library.map((media) => {
+                  const active = selectedIds.includes(media.id)
+                  return (
+                    <button
+                      key={media.id}
+                      type="button"
+                      onClick={() => choose(media)}
+                      aria-pressed={active}
+                      title={`${media.name} · ${formatBytes(media.size)}`}
+                      className={`overflow-hidden rounded-lg border-2 transition-colors ${
+                        active ? 'border-accent-deep' : 'border-transparent hover:border-line-strong'
+                      }`}
+                    >
+                      {media.kind === 'image' ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={media.thumbUrl} alt={media.alt} className="aspect-square w-full object-cover" />
+                      ) : (
+                        <span className="grid aspect-square w-full place-items-center bg-surface text-[11px] font-medium text-muted">
+                          {media.extension}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
             </div>
 
             {multiple && (

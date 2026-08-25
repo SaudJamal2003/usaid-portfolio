@@ -93,9 +93,16 @@ model Media {
   size             Int
   width            Int?
   height           Int?
+  // Editable label shown in the CMS. The storage key is never renamed: it is
+  // embedded in every URL already handed out, so changing it would break live
+  // references (Phase 5 brief).
+  displayName      String?
   altText          String?
   caption          String?
   description      String?
+  // Soft delete. Archived media disappears from pickers but keeps its object
+  // and its rows intact, so nothing that references it can break (§38).
+  archivedAt       DateTime?
   // Derived renditions: { thumb, medium, large } → storage keys.
   renditions       Json?
   createdAt        DateTime @default(now())
