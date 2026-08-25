@@ -88,7 +88,7 @@ export type CmsContent = {
   contactCta: { note: string | null; buttonLabel: string; buttonUrl: string } | null
   clientAvatars: CmsMedia[]
   navigation: { label: string; url: string; openInNewTab: boolean }[]
-  socials: { platform: string; url: string }[]
+  socials: { platform: string; url: string; icon: CmsMedia | null }[]
   stats: { value: string; caption: string; blurb: string | null }[]
   experience: CmsExperience[]
   mentors: CmsMentor[]

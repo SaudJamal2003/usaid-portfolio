@@ -205,11 +205,14 @@ async function main() {
 
   const socials = ['X', 'Instagram', 'Dribbble', 'Threads', 'LinkedIn']
   for (const [i, platform] of socials.entries()) {
+    const iconId = await ingest(`social-${i + 1}.png`, `${platform} icon`)
     await db.socialLink.upsert({
       where: { id: `social-${i}` },
-      update: {},
-      // URLs are not in the frontend -- the icons link nowhere today.
-      create: { id: `social-${i}`, platform, url: '', visible: false, displayOrder: i },
+      update: { iconId },
+      // The icons currently link to #contact rather than anywhere real, so the
+      // URL is left blank for the owner to fill in. Visible, because they are
+      // on the live site today.
+      create: { id: `social-${i}`, platform, url: '', visible: true, displayOrder: i, iconId },
     })
   }
   for (const [index, mediaId] of clientAvatars.entries()) {

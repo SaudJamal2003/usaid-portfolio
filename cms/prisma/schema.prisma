@@ -126,6 +126,7 @@ model Media {
   settingsOgImages    SiteSettings[] @relation("SettingsOgImage")
   settingsFavicons    SiteSettings[] @relation("SettingsFavicon")
   clientAvatars       ClientAvatar[]
+  socialIcons         SocialLink[]
 
   @@map("media")
 }
@@ -227,6 +228,10 @@ model SocialLink {
   url          String
   visible      Boolean @default(true)
   displayOrder Int
+  // The footer draws each platform as an illustrated badge rather than a glyph
+  // font, so the icon is a media reference like any other image.
+  iconId       String?
+  icon         Media?  @relation(fields: [iconId], references: [id], onDelete: SetNull)
 
   @@index([displayOrder])
   @@map("social_links")

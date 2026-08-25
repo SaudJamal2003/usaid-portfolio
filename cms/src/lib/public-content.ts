@@ -57,7 +57,11 @@ export async function buildPublicContent() {
         include: { media: { select: mediaSelect } },
       }),
       db.navigationItem.findMany({ where: { visible: true }, orderBy: { displayOrder: 'asc' } }),
-      db.socialLink.findMany({ where: { visible: true }, orderBy: { displayOrder: 'asc' } }),
+      db.socialLink.findMany({
+        where: { visible: true },
+        orderBy: { displayOrder: 'asc' },
+        include: { icon: { select: mediaSelect } },
+      }),
       db.statCard.findMany({ where: { visible: true }, orderBy: { displayOrder: 'asc' } }),
       db.experience.findMany({
         where: PUBLISHED,
@@ -131,7 +135,7 @@ export async function buildPublicContent() {
     },
     clientAvatars: clientAvatars.map((row) => asMedia(row.media)).filter(Boolean),
     navigation: nav.map((n) => ({ label: n.label, url: n.url, openInNewTab: n.openInNewTab })),
-    socials: socials.map((s) => ({ platform: s.platform, url: s.url })),
+    socials: socials.map((s) => ({ platform: s.platform, url: s.url, icon: asMedia(s.icon) })),
     stats: stats.map((s) => ({ value: s.value, caption: s.caption, blurb: s.blurb })),
     experience: experience.map((e) => ({
       company: e.company,
