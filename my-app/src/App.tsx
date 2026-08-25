@@ -3,6 +3,7 @@ import { SignatureLoader } from "./components/SignatureLoader";
 import { ContentProvider } from "./content/ContentProvider";
 import { About } from "./pages/About";
 import { Home } from "./pages/Home";
+import { CaseStudy } from "./pages/CaseStudy";
 import { ShukarHai } from "./pages/ShukarHai";
 
 function subscribe(onChange: () => void) {
@@ -10,9 +11,13 @@ function subscribe(onChange: () => void) {
   return () => window.removeEventListener("hashchange", onChange);
 }
 
-/* Three pages, no router dependency: "#/about" and "#/work/shukar-hai" are the
-   standalone pages and every other hash falls through to home, which keeps the
-   in-page "#work" / "#contact" anchors working from any of them. */
+/* No router dependency: "#/about" and "#/work/<slug>" are the standalone pages
+   and every other hash falls through to home, which keeps the in-page "#work" /
+   "#contact" anchors working from any of them.
+   
+   Shukar Hai keeps its hand-built page. Every other slug is rendered from CMS
+   blocks, so the original case study presentation is preserved untouched while
+   new ones come from the CMS. */
 function useHashRoute() {
   return useSyncExternalStore(
     subscribe,
@@ -29,6 +34,17 @@ function App() {
   const hash = useHashRoute();
   const isAbout = hash.startsWith("#/about");
   const isShukarHai = hash.startsWith("#/work/shukar-hai");
+
+  /* "#/work/<slug>?preview=<token>" — the fragment carries its own query, so it
+     is parsed here rather than from location.search, which a hash route never
+     populates. */
+  const caseStudyRoute = (() => {
+    if (isShukarHai || !hash.startsWith("#/work/")) return null;
+    const [path, query] = hash.slice("#/work/".length).split("?");
+    const slug = path.replace(/\/$/, "");
+    if (!slug) return null;
+    return { slug, previewToken: new URLSearchParams(query ?? "").get("preview") ?? undefined };
+  })();
 
   // An anchor clicked from the other page lands before its section is mounted,
   // so the browser's own fragment scroll finds nothing. Redo it here, before
@@ -48,7 +64,15 @@ function App() {
   return (
     <ContentProvider>
       <SignatureLoader>
-        {isShukarHai ? <ShukarHai /> : isAbout ? <About /> : <Home />}
+        {isShukarHai ? (
+        <ShukarHai />
+      ) : caseStudyRoute ? (
+        <CaseStudy slug={caseStudyRoute.slug} previewToken={caseStudyRoute.previewToken} />
+      ) : isAbout ? (
+        <About />
+      ) : (
+        <Home />
+      )}
       </SignatureLoader>
     </ContentProvider>
   );
