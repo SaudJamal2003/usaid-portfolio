@@ -15,3 +15,6 @@ export const NEW_PROJECT_TITLE = 'Untitled project'
  * database anyway, so a bad one fails there.
  */
 export const ENTITY_ID_MAX = 200
+
+/** Name a freshly created mentor carries until it is filled in. */
+export const NEW_MENTOR_NAME = 'New mentor'

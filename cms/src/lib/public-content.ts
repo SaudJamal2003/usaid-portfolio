@@ -153,6 +153,7 @@ export async function buildPublicContent() {
       name: m.name,
       role: m.role,
       tribute: m.tribute,
+      linkedinUrl: m.linkedinUrl,
       photo: asMedia(m.photo),
     })),
     gallery: gallery.map((g) => ({ caption: g.caption, image: asMedia(g.image) })),

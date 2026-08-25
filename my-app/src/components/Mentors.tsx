@@ -1,4 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useContent } from '../content/ContentProvider'
+import type { CmsMentor } from '../content/types'
 import mentorMain from '../assets/figma/mentor-main.png'
 import mentorSecond from '../assets/figma/mentor-polaroid-2.png'
 import mentorThird from '../assets/figma/mentor-polaroid-1.png'
@@ -11,10 +13,9 @@ type Mentor = {
   tribute: string
 }
 
-/* PLACEHOLDER — only Tarib's entry is real. Fill in the name, role and tribute
-   for the other two (and swap the photos if these are not the right ones); the
-   carousel reads everything from this array and needs no other change. */
-const MENTORS: Mentor[] = [
+/* Bundled fallback, used when the CMS is unreachable or has nothing publishable
+   (§18). Kept verbatim so the fallback render is identical to what ships. */
+const FALLBACK_MENTORS: Mentor[] = [
   {
     name: 'Tarib Ahmed',
     role: 'COO - Techtree',
@@ -100,8 +101,43 @@ function PrimaryCard({ mentor }: { mentor: Mentor }) {
   )
 }
 
+/**
+ * CMS mentors are used only when they are at least as good as what ships.
+ *
+ * The carousel needs a preview card that is a different person from the active
+ * one, so a single published mentor would leave it showing the same face twice.
+ * Falling back until the CMS set is complete keeps a migration from quietly
+ * degrading the section.
+ */
+function isCmsMentorsComplete(entries: CmsMentor[]) {
+  return (
+    entries.length >= FALLBACK_MENTORS.length &&
+    entries.every(
+      (entry) =>
+        entry.name.trim() &&
+        entry.role.trim() &&
+        entry.tribute.trim() &&
+        !entry.name.startsWith('TODO') &&
+        !entry.tribute.startsWith('TODO'),
+    )
+  )
+}
+
 export function Mentors() {
   const reduced = usePrefersReducedMotion()
+  const content = useContent()
+
+  /* Content only. Card geometry, the grow-from-preview animation and the
+     stacked text box all stay in this component. */
+  const cmsMentors = content?.mentors ?? []
+  const MENTORS: Mentor[] = isCmsMentorsComplete(cmsMentors)
+    ? cmsMentors.map((entry, index) => ({
+        name: entry.name,
+        role: entry.role,
+        tribute: entry.tribute,
+        photo: entry.photo?.mediumUrl ?? FALLBACK_MENTORS[index % FALLBACK_MENTORS.length].photo,
+      }))
+    : FALLBACK_MENTORS
 
   /* One source of truth. `previous` exists only for the length of a transition,
      so the outgoing card can be animated away; everything on screen — photo,
@@ -114,14 +150,21 @@ export function Mentors() {
   const textRef = useRef<HTMLDivElement>(null)
   const previewRef = useRef<HTMLButtonElement>(null)
 
-  const go = useCallback((step: 1 | -1) => {
-    setStage((current) => ({
-      index: (current.index + step + MENTORS.length) % MENTORS.length,
-      previous: current.index,
-      direction: step,
-      token: current.token + 1,
-    }))
-  }, [])
+  /* `count` is in the deps deliberately: MENTORS was a module constant, but it
+     now changes when CMS content lands, and an empty dep list would leave this
+     wrapping against the bundled length forever. */
+  const count = MENTORS.length
+  const go = useCallback(
+    (step: 1 | -1) => {
+      setStage((current) => ({
+        index: (current.index + step + count) % count,
+        previous: current.index,
+        direction: step,
+        token: current.token + 1,
+      }))
+    },
+    [count],
+  )
 
   useLayoutEffect(() => {
     if (previous < 0) return

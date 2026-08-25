@@ -43,6 +43,7 @@ export type CmsMentor = {
   name: string
   role: string
   tribute: string
+  linkedinUrl: string | null
   photo: CmsMedia | null
 }
 

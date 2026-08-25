@@ -286,8 +286,17 @@ model Experience {
 model Mentor {
   id           String        @id @default(cuid())
   name         String
+  // One free-text line, exactly as the card renders it. Deliberately not split
+  // into role + company: the real values do not split cleanly ("Fractional Head
+  // of Design for SaaS & B2B Founders" has no company), and forcing them apart
+  // would mean mangling the copy the owner actually wrote.
   role         String
+  // The tribute is the bio -- there is no second description field, because the
+  // card renders exactly one body of copy.
   tribute      String
+  // Stored, not rendered. Mentors are real people and crediting them with a
+  // link is the most plausible next addition to the card.
+  linkedinUrl  String?
   photoId      String?
   photo        Media?        @relation(fields: [photoId], references: [id], onDelete: SetNull)
   displayOrder Int

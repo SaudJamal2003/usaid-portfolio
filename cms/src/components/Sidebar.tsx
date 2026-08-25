@@ -19,9 +19,9 @@ const GROUPS = [
       { href: '/admin/case-studies', label: 'Case Studies', icon: 'M4 4h11l5 5v11H4zM14 4v6h6' },
       { href: '/admin/projects', label: 'Projects', icon: 'M3 7h6l2 2h10v11H3zM3 7V5h6l2 2' },
       { href: '/admin/experience', label: 'Experience', icon: 'M4 8h16v12H4zM9 8V5h6v3' },
+      { href: '/admin/mentors', label: 'Mentors', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0' },
       { href: '/admin/services', label: 'Services', icon: 'M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z' },
       { href: '/admin/testimonials', label: 'Testimonials', icon: 'M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4z' },
-      { href: '/admin/mentors', label: 'Mentors', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0' },
     ],
   },
   {

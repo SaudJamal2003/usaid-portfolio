@@ -276,6 +276,9 @@ async function main() {
   console.log('  experience ready (3 roles need bullets written)')
 
   // ---- mentors ----------------------------------------------------------
+  /* All three are real. The owner wrote the second and third directly in
+     Mentors.tsx after the first seed ran, so this migrates their words rather
+     than inventing any. Photo assignment follows the frontend exactly. */
   const mentors = [
     {
       name: 'Tarib Ahmed',
@@ -285,10 +288,22 @@ async function main() {
       tribute:
         'My brother, Tarib Ahmed, has been one of the most influential people in my life. More than a brother, he has been a mentor, guide, and constant source of support throughout my journey. From teaching me valuable lessons early on to helping me navigate challenges and opportunities, his advice and encouragement have shaped the way I think and grow. Through every high and low, he has always stood beside me, believing in me even when I doubted myself. Much of who I am today—both personally and professionally—is a reflection of the support, values, and confidence he helped instill in me.',
     },
-    // These two are placeholders in the frontend today. Carried across as
-    // DRAFT rather than invented.
-    { name: TODO('mentor 2 name'), role: TODO('role'), photoId: mentorTwo, status: ContentStatus.DRAFT, tribute: TODO('mentor 2 tribute') },
-    { name: TODO('mentor 3 name'), role: TODO('role'), photoId: mentorThree, status: ContentStatus.DRAFT, tribute: TODO('mentor 3 tribute') },
+    {
+      name: 'Talha Yasin',
+      role: 'Fractional Head of Design for SaaS & B2B Founders',
+      photoId: mentorThree,
+      status: ContentStatus.PUBLISHED,
+      tribute:
+        'Talha Yasin was one of the people who helped shape the way I approach UI design. He taught me how to move beyond simply recreating existing interfaces and start thinking about creating new flows and experiences from scratch. Through his guidance and mentorship, I learned how to explore different design approaches, practice consistently, and understand the reasoning behind good UI decisions. His feedback pushed me to experiment, improve my visual thinking, and become more confident in my design process. A lot of the fundamentals I rely on today were strengthened through the time I spent learning and practicing under his mentorship.',
+    },
+    {
+      name: 'Asad Anwer',
+      role: 'Co-founder - Bytecorp',
+      photoId: mentorTwo,
+      status: ContentStatus.PUBLISHED,
+      tribute:
+        'Asad Anwer played an important role in helping me understand UX and how design can be used to solve real-world problems. He taught me to look beyond the visuals and think deeply about users, their needs, behaviors, and the challenges they are trying to solve. His guidance helped me develop a stronger sense of direction when approaching design problems and understand how thoughtful design can turn user needs into meaningful experiences. He consistently pushed me to explore new ideas, learn new things, and keep improving my design thinking. Much of the way I approach UX today has been shaped by his guidance and mentorship.',
+    },
   ]
   for (const [i, m] of mentors.entries()) {
     await db.mentor.upsert({
@@ -297,7 +312,7 @@ async function main() {
       create: { id: `mentor-${i}`, ...m, displayOrder: i },
     })
   }
-  console.log('  mentors ready (2 need real content)')
+  console.log(`  ${mentors.length} mentors ready`)
 
   // ---- case study + projects -------------------------------------------
   const shukar = await db.caseStudy.upsert({
