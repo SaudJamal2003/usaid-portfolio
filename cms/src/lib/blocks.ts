@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { sanitizeRichText } from './rich-text'
 
 /**
  * Case study block payloads.
@@ -9,7 +10,9 @@ import { z } from 'zod'
  * portfolio — never a migration.
  */
 
-const richText = z.string().max(20_000)
+/* Sanitised at the schema boundary rather than in each action: every write path
+   goes through parseBlock, so this is the one place it can be enforced. */
+const richText = z.string().max(50_000).transform(sanitizeRichText)
 const mediaId = z.string().cuid()
 
 export const blockSchemas = {

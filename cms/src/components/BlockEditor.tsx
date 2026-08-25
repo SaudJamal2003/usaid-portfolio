@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { BLOCK_META, BLOCK_TYPES, type BlockTypeName } from '@/lib/blocks'
 import { addBlock, deleteBlock, reorderBlocks, updateBlock } from '@/app/admin/case-studies/actions'
 import { MediaPicker } from './MediaPicker'
+import { RichTextEditor } from './RichTextEditor'
 import { Alert, Button, Card, Field, Input, Select, Textarea } from './ui'
 
 export type EditorBlock = {
@@ -34,7 +35,11 @@ function BlockFields({
             <Input value={text('heading')} onChange={(e) => set('heading', e.target.value)} />
           </Field>
           <Field label="Content" required>
-            <Textarea rows={6} value={text('content')} onChange={(e) => set('content', e.target.value)} />
+            <RichTextEditor
+              value={text('content')}
+              placeholder="Write the section…"
+              onChange={(html) => set('content', html)}
+            />
           </Field>
         </>
       )
@@ -57,7 +62,11 @@ function BlockFields({
             <Input value={text('heading')} onChange={(e) => set('heading', e.target.value)} />
           </Field>
           <Field label="Content" required>
-            <Textarea rows={5} value={text('content')} onChange={(e) => set('content', e.target.value)} />
+            <RichTextEditor
+              value={text('content')}
+              placeholder="Write the section…"
+              onChange={(html) => set('content', html)}
+            />
           </Field>
           <MediaPicker value={text('mediaId')} onChange={(id) => set('mediaId', id)} />
           <Field label="Image position">
