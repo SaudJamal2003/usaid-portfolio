@@ -1,3 +1,8 @@
+// This module holds SESSION_SECRET and the MinIO credentials. The import
+// makes bundling it into a client component a build error rather than a silent
+// secret leak.
+import 'server-only'
+
 import { z } from 'zod'
 
 /* Fail at boot with a readable message rather than at the first request with

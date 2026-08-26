@@ -1,3 +1,7 @@
+// Holds the MinIO credentials. Importing this from a client component must
+// fail the build, not ship the keys.
+import 'server-only'
+
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { randomBytes } from 'node:crypto'
 import { extname } from 'node:path'

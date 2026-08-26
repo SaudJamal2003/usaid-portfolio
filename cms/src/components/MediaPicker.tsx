@@ -72,7 +72,10 @@ export function MediaPicker({
   /* Resolved by id rather than read out of the browse list, so the current
      selection still previews when it is archived or on another page. */
   useEffect(() => {
-    if (!key) return setPreview([])
+    if (!key) {
+      setPreview([])
+      return
+    }
     let cancelled = false
     fetch(`/api/admin/media?ids=${key}`)
       .then((r) => r.json())

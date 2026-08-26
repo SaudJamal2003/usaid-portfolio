@@ -114,7 +114,6 @@ export function RichTextEditor({
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value, { emitUpdate: false })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor])
 
   if (!editor) return <div className="min-h-32 rounded-lg border border-line-strong bg-surface" />

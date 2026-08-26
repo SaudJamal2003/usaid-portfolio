@@ -14,7 +14,7 @@
 import { PrismaClient, ContentStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { readFile, stat } from 'node:fs/promises'
-import { join, basename, extname } from 'node:path'
+import { join, extname } from 'node:path'
 import sharp from 'sharp'
 import { putObject, storageKey } from '../src/lib/storage'
 import { env } from '../src/lib/env'

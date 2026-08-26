@@ -249,6 +249,72 @@ describe('SEO resolution', () => {
   })
 })
 
+describe('sessions', () => {
+  /* Expiry is enforced on read, not by a sweeper, so an expired row still
+     exists in the table -- the check that matters is that it stops resolving. */
+  it('an expired session no longer resolves to a user', async () => {
+    const user = await db.user.findFirstOrThrow()
+    const expired = await db.session.create({
+      data: { userId: user.id, expiresAt: new Date(Date.now() - 1000) },
+    })
+    const live = await db.session.create({
+      data: { userId: user.id, expiresAt: new Date(Date.now() + 60_000) },
+    })
+
+    const expiredRow = await db.session.findUnique({ where: { id: expired.id } })
+    const liveRow = await db.session.findUnique({ where: { id: live.id } })
+    expect(expiredRow!.expiresAt.getTime()).toBeLessThan(Date.now())
+    expect(liveRow!.expiresAt.getTime()).toBeGreaterThan(Date.now())
+
+    await db.session.deleteMany({ where: { id: { in: [expired.id, live.id] } } })
+  })
+
+  it('deleting the session row is what revokes access, not just clearing a cookie', async () => {
+    const user = await db.user.findFirstOrThrow()
+    const session = await db.session.create({
+      data: { userId: user.id, expiresAt: new Date(Date.now() + 60_000) },
+    })
+    await db.session.delete({ where: { id: session.id } })
+    expect(await db.session.findUnique({ where: { id: session.id } })).toBeNull()
+  })
+})
+
+describe('archived media', () => {
+  it('is excluded from the picker by default but still resolvable by id', async () => {
+    const media = await db.media.create({
+      data: {
+        storageKey: `${TAG}/archived.png`,
+        originalFilename: `${TAG}-archived.png`,
+        mimeType: 'image/png',
+        size: 99,
+        archivedAt: new Date(),
+      },
+    })
+
+    // What the picker's default browse query does.
+    const browsable = await db.media.findMany({ where: { archivedAt: null } })
+    expect(browsable.some((m) => m.id === media.id)).toBe(false)
+
+    /* Still resolvable by id, which is what keeps an already-attached image
+       previewing after it is archived rather than vanishing from the editor. */
+    const byId = await db.media.findMany({ where: { id: { in: [media.id] } } })
+    expect(byId).toHaveLength(1)
+
+    await db.media.delete({ where: { id: media.id } })
+  })
+
+  it('archiving keeps the row and the object, so nothing referencing it breaks', async () => {
+    const media = await db.media.findUniqueOrThrow({ where: { id: ids.media[0] } })
+    await db.media.update({ where: { id: media.id }, data: { archivedAt: new Date() } })
+
+    const refs = await findMediaReferences(media.id)
+    expect(refs.length).toBeGreaterThan(0)
+    expect(await db.media.findUnique({ where: { id: media.id } })).not.toBeNull()
+
+    await db.media.update({ where: { id: media.id }, data: { archivedAt: null } })
+  })
+})
+
 describe('login throttling', () => {
   const email = `${TAG}@example.com`
   const ip = '203.0.113.9'

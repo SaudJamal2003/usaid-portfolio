@@ -531,7 +531,8 @@ function MediaDetailPanel({
                 variant={confirming === 'delete' ? 'danger' : 'primary'}
                 onClick={() => {
                   setConfirming(null)
-                  confirming === 'delete' ? destroy() : archive()
+                  if (confirming === 'delete') destroy()
+                  else archive()
                 }}
               >
                 {confirming === 'delete' ? 'Delete anyway' : media.archived ? 'Restore' : 'Archive'}
