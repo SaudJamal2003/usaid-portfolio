@@ -133,15 +133,66 @@ describe('projects in the public payload', () => {
     expect(mine?.thumbnail).not.toBeNull()
   })
 
-  it('only links a project to its case study when that study is itself published', async () => {
-    const draftCsId = ids.caseStudies[0]
-    await db.project.update({ where: { id: ids.projects[1] }, data: { caseStudyId: draftCsId } })
+  /* The link is the thing a visitor can click, so each status gets its own
+     case rather than one test standing in for all three. */
+  it.each([
+    ['draft', 0],
+    ['archived', 2],
+  ])('does not expose a link to a %s case study', async (_label, index) => {
+    await db.project.update({
+      where: { id: ids.projects[1] },
+      data: { caseStudyId: ids.caseStudies[index] },
+    })
 
     const { projects } = await buildPublicContent()
-    const mine = projects.find((p) => p.slug === `${TAG}-published-p`)
-    expect(mine?.caseStudySlug).toBeNull()
+    expect(projects.find((p) => p.slug === `${TAG}-published-p`)?.caseStudySlug).toBeNull()
 
     await db.project.update({ where: { id: ids.projects[1] }, data: { caseStudyId: null } })
+  })
+
+  it('does expose the link once the case study is published', async () => {
+    await db.project.update({
+      where: { id: ids.projects[1] },
+      data: { caseStudyId: ids.caseStudies[1] },
+    })
+
+    const { projects } = await buildPublicContent()
+    expect(projects.find((p) => p.slug === `${TAG}-published-p`)?.caseStudySlug).toBe(
+      `${TAG}-published-cs`,
+    )
+
+    await db.project.update({ where: { id: ids.projects[1] }, data: { caseStudyId: null } })
+  })
+
+  it('never marks an unpublished project as featured, because it is not there at all', async () => {
+    await db.project.update({ where: { id: ids.projects[0] }, data: { featured: true } })
+
+    const { projects } = await buildPublicContent()
+    expect(projects.some((p) => p.slug === `${TAG}-draft-p`)).toBe(false)
+
+    await db.project.update({ where: { id: ids.projects[0] }, data: { featured: false } })
+  })
+
+  it('orders deterministically even when two projects share a displayOrder', async () => {
+    /* Reordering renumbers only the featured subset, so a tie is reachable in
+       normal use; the payload must still come back in a stable order. */
+    const tied = await db.project.create({
+      data: {
+        title: `${TAG} tied project`,
+        slug: `${TAG}-tied-p`,
+        status: 'PUBLISHED',
+        displayOrder: 901,
+      },
+    })
+    ids.projects.push(tied.id)
+
+    const first = (await buildPublicContent()).projects.map((p) => p.slug)
+    const second = (await buildPublicContent()).projects.map((p) => p.slug)
+    const third = (await buildPublicContent()).projects.map((p) => p.slug)
+
+    expect(first).toEqual(second)
+    expect(second).toEqual(third)
+    expect(first.filter((s) => s.startsWith(TAG))).toHaveLength(2)
   })
 })
 

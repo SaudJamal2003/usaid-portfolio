@@ -90,7 +90,10 @@ export async function buildPublicContent() {
       }),
       db.project.findMany({
         where: PUBLISHED,
-        orderBy: { displayOrder: 'asc' },
+        // Two sort keys, deliberately: reordering renumbers only the featured
+        // subset, so displayOrder can tie, and a single key would leave the
+        // order between tied rows undefined from one query to the next.
+        orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
         include: { thumbnail: { select: mediaSelect }, caseStudy: { select: { slug: true, status: true } } },
       }),
       db.caseStudy.findMany({

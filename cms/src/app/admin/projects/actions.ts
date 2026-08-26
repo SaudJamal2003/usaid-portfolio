@@ -158,13 +158,6 @@ export async function setProjectStatus(id: string, status: 'DRAFT' | 'ARCHIVED')
   return { ok: true as const }
 }
 
-export async function setProjectFeatured(id: string, featured: boolean) {
-  await requireUser()
-  await db.project.update({ where: { id }, data: { featured } })
-  revalidatePath('/admin/projects')
-  return { ok: true as const }
-}
-
 /**
  * Whole-list write in one transaction, so a partial failure cannot leave two
  * projects claiming the same slot. This is the order the homepage renders in —

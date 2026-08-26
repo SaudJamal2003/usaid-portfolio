@@ -32,10 +32,12 @@ export default async function ProjectsPage({
     ...(category && { category }),
   }
 
-  const orderBy: Prisma.ProjectOrderByWithRelationInput =
-    sort === 'title' ? { title: 'asc' }
-    : sort === 'updated' ? { updatedAt: 'desc' }
-    : { displayOrder: 'asc' }
+  /* Every sort carries a tiebreaker so paging is stable: without one, two rows
+     with the same value can swap between page 1 and page 2. */
+  const orderBy: Prisma.ProjectOrderByWithRelationInput[] =
+    sort === 'title' ? [{ title: 'asc' }, { createdAt: 'asc' }]
+    : sort === 'updated' ? [{ updatedAt: 'desc' }, { createdAt: 'asc' }]
+    : [{ displayOrder: 'asc' }, { createdAt: 'asc' }]
 
   const [items, total, featured, categories] = await Promise.all([
     db.project.findMany({
