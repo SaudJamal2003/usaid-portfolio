@@ -1,6 +1,6 @@
 import 'server-only'
 import sharp from 'sharp'
-import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand, HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { db } from './db'
 import { deleteObject, publicUrl, putObject, s3, storageKey } from './storage'
@@ -40,6 +40,24 @@ export async function createUploadUrl(filename: string, mimeType: string, size: 
   return { ok: true as const, url, key }
 }
 
+/**
+ * Existence check that transfers no body.
+ *
+ * Confirming an upload landed used to call fetchObject, which downloads the
+ * whole object -- so finalising a 95 MB video pulled 95 MB back out of storage
+ * for no reason. HEAD returns the metadata alone.
+ */
+async function objectExists(key: string): Promise<boolean> {
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: env.MINIO_BUCKET, Key: key }))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Downloads the object. Only rendition generation needs this, and only for
+ *  images under RENDITION_MAX_BYTES. */
 async function fetchObject(key: string): Promise<Buffer | null> {
   try {
     const result = await s3.send(new GetObjectCommand({ Bucket: env.MINIO_BUCKET, Key: key }))
@@ -98,8 +116,9 @@ export async function finalizeUpload(input: {
   if (!check.ok) return { ok: false, error: check.error }
 
   // Confirm the client actually uploaded something to the key it claims.
-  const stored = await fetchObject(input.key)
-  if (!stored) return { ok: false, error: 'The upload did not complete. Try again.' }
+  if (!(await objectExists(input.key))) {
+    return { ok: false, error: 'The upload did not complete. Try again.' }
+  }
 
   const derived = await deriveRenditions(input.key, input.mimeType, input.size)
 
@@ -162,8 +181,9 @@ export async function replaceMedia(mediaId: string, key: string, filename: strin
   const existing = await db.media.findUnique({ where: { id: mediaId } })
   if (!existing) return { ok: false as const, error: 'Media not found.' }
 
-  const stored = await fetchObject(key)
-  if (!stored) return { ok: false as const, error: 'The upload did not complete. Try again.' }
+  if (!(await objectExists(key))) {
+    return { ok: false as const, error: 'The upload did not complete. Try again.' }
+  }
 
   const derived = await deriveRenditions(key, mimeType, size)
 

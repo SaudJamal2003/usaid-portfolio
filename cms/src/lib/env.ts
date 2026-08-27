@@ -9,6 +9,9 @@ import { z } from 'zod'
    an undefined. Secrets live here and nowhere near CMS-editable content (§13). */
 const schema = z.object({
   DATABASE_URL: z.string().url(),
+  // Unpooled; used only by `prisma migrate`. Optional at runtime because the
+  // running app never needs it -- only the migration step does.
+  DIRECT_URL: z.string().url().optional(),
 
   MINIO_ENDPOINT: z.string().url(),
   MINIO_ROOT_USER: z.string().min(1),

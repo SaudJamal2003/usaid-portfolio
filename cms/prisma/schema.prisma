@@ -11,7 +11,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Pooled. Every serverless invocation opens its own connection, so in
+  // production this points at the pooler endpoint (PgBouncer) rather than the
+  // database directly, which would exhaust connections under any real traffic.
+  url       = env("DATABASE_URL")
+  // Direct, unpooled. Migrations need a real session: a transaction pooler
+  // cannot run the advisory locks and DDL that `migrate deploy` issues.
+  // Locally both point at the same Postgres, which is why nothing changes here.
+  directUrl = env("DIRECT_URL")
 }
 
 enum ContentStatus {
