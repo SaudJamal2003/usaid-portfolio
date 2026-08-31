@@ -16,10 +16,15 @@ import bcrypt from 'bcryptjs'
 import { readFile, stat } from 'node:fs/promises'
 import { join, extname } from 'node:path'
 import sharp from 'sharp'
-import { putObject, storageKey } from '../src/lib/storage'
-import { env } from '../src/lib/env'
+import { createStorage, storageKey } from '../src/lib/storage-core'
+import { parseEnv } from '../src/lib/env-schema'
 
 const db = new PrismaClient()
+
+/* Validated the same way the app validates it, but without the server-only
+   guard the app's env module carries -- see env-schema.ts. */
+const env = parseEnv(process.env)
+const { putObject } = createStorage(env)
 
 const ASSETS = join(process.cwd(), '..', 'my-app', 'src', 'assets', 'figma')
 
