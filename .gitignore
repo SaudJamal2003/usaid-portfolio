@@ -1,0 +1,12 @@
+# Secrets. Production credentials must never become committable, and the Neon
+# CLI writes env files into whichever directory it runs in — including this one,
+# which had no .gitignore at all before.
+.env
+.env.*
+!.env.example
+
+# Neon CLI workspace link (holds org/project/branch ids).
+.neon
+
+# Agent-local config: contains absolute symlinks specific to this machine.
+.claude/
