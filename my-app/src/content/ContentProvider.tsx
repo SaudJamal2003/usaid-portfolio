@@ -16,7 +16,14 @@ import { looksLikeContent } from './types'
  * be able to blank the portfolio (§18).
  */
 
-const API_BASE = import.meta.env.VITE_CMS_URL ?? ''
+/* Vite inlines this at build time, so an unset VITE_CMS_URL on the host would
+   silently ship a build that never calls the CMS -- indistinguishable from a
+   CMS outage, because both just fall back to bundled content. Production
+   therefore defaults to the real CMS rather than to nothing. Setting
+   VITE_CMS_URL still overrides it, and dev without configuration stays offline
+   as before. */
+const API_BASE =
+  import.meta.env.VITE_CMS_URL ?? (import.meta.env.PROD ? 'https://cms.usaidux.space' : '')
 const TIMEOUT_MS = 2500
 
 export function ContentProvider({ children }: { children: ReactNode }) {
