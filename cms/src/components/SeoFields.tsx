@@ -92,21 +92,20 @@ export function SeoFields({
 }
 
 /**
- * The standing caveat, shown next to every SEO form.
+ * Reminder that publishing is the last step, shown next to every SEO form.
  *
- * Repeated deliberately: someone filling in an OG image here will reasonably
- * assume it appears when they paste the link into Slack, and it will not.
+ * These values now reach real link previews (Slack, LinkedIn, X, WhatsApp,
+ * iMessage) within about 30 seconds of publishing — a middleware on the
+ * portfolio resolves them per page for crawler requests. Nothing here is
+ * visible to a scraper until the record is published.
  */
 export function SeoLimitationNotice() {
   return (
-    <div className="rounded-lg bg-warn-bg p-3 text-xs text-warn">
-      <p className="font-medium">These values are stored, not yet served.</p>
-      <p className="mt-1 text-warn/90">
-        The portfolio is a Vite app using hash routing, so every route returns the same HTML and the
-        live tags come from <code>index.html</code>. Slack, LinkedIn and X do not run JavaScript, so
-        they will not see anything set here — a link to a case study still previews with the site-wide
-        image. Per-page metadata starts working when the portfolio moves to real paths with
-        prerendering; this data is stored so that migration is a wiring job, not a content job.
+    <div className="rounded-lg bg-info-bg p-3 text-xs text-info">
+      <p className="font-medium">These values drive real link previews.</p>
+      <p className="mt-1 text-info/90">
+        Once published, a shared link to this page shows this title, description and image on
+        Slack, LinkedIn, X, WhatsApp and iMessage — usually within about 30 seconds.
       </p>
     </div>
   )

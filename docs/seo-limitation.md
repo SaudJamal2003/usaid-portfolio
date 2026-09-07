@@ -1,86 +1,53 @@
-# SEO: what the CMS does, and what it cannot do yet
+# SEO: how per-page metadata reaches link previews
 
-Short version: **the CMS stores metadata correctly, and none of it reaches a
-crawler or a link preview today.** That is not a bug in the CMS — it is a
-property of how the portfolio is routed, and it will stay true until the
-routing changes.
+Short version: **CMS-stored metadata reaches real link previews** (Slack,
+LinkedIn, X, WhatsApp, iMessage) within about 30 seconds of publishing, no
+deployment required. This wasn't always true — see "How it used to work" below
+for why, and why fixing it required a routing change first.
 
-## Why
+## How it works today
 
-The portfolio is a Vite SPA using hash routing:
+The portfolio uses real path routing (`/work/shukar-hai`, `/about`), not hash
+routing. A Vercel Routing Middleware (`my-app/middleware.ts`) inspects every
+request to `/`, `/about`, and `/work/:slug`:
 
-```
-https://www.usaidux.space/#/work/shukar-hai
-                          └──────────────┘
-                          never sent to the server
-```
+- **A normal browser** gets the exact same static `index.html` and
+  client-side app as always — the middleware does nothing for real visitors.
+- **A known crawler/bot user agent** (Facebook, Slack, X, WhatsApp, LinkedIn,
+  Discord, Telegram, Google, Apple, Pinterest, Reddit) gets the same HTML,
+  but with the `<title>` and `og:`/`twitter:` tags swapped for that specific
+  page's CMS-resolved values, fetched live from `/api/v1/content` or
+  `/api/v1/case-studies/:slug` at request time.
 
-A URL fragment is a client-side concept. The server sees a request for `/` and
-returns the same `index.html` for every route, carrying one fixed set of tags.
+Because the middleware fetches live, updating SEO fields in the CMS and
+publishing is enough — the next crawler request (cached up to 30 seconds,
+same window as the rest of the public API) sees the new values. No rebuild,
+no webhook.
 
-On top of that, the scrapers that build link previews — Slack, LinkedIn, X,
-Facebook, WhatsApp, iMessage — **do not execute JavaScript at all**. They fetch
-the HTML, read the `og:` tags, and stop. Anything React writes into
-`document.head` after load happens long after they have left.
+If the CMS is unreachable, or a slug is unpublished, the middleware fails
+open: it serves the original, unmodified default tags rather than erroring —
+a generic preview beats a broken one, and a draft's content can never leak
+through it (the CMS's case-study endpoint never serves an unpublished slug in
+the first place).
 
-Google does render JavaScript for many pages, but treats client-injected
-metadata as a weaker signal than what is in the served HTML, and gives no
-guarantee about timing.
+## How it used to work (kept for context)
 
-So today:
+The portfolio used to be a Vite SPA on **hash routing**
+(`#/work/shukar-hai`). A URL fragment never reaches a server — that's true
+for any HTTP client, not just browsers — so the server only ever saw a
+request for `/` and returned one fixed `index.html` for every "page." Social
+scrapers don't execute JavaScript either, so whatever a page's React
+component might set on `document.head` after load was invisible to them.
+Every shared link showed the same site-wide title and image, regardless of
+which case study.
 
-| | Source | Per-page? |
-|---|---|---|
-| `<title>`, `description`, `og:*` on the live site | `my-app/index.html` | No — one set, site-wide |
-| Values stored in the CMS | Postgres, served via `/api/v1/content` | Yes, but not rendered |
-
-Pasting a link to any case study into Slack shows the site-wide preview image
-and the site-wide title, no matter what is set in the CMS.
-
-## What was built anyway, and why it is not wasted
-
-- Global defaults on Site Settings.
-- Per-entity overrides for the homepage, every project and every case study.
-- A resolution chain — entity value, then global default, then nothing — that
-  lives in one module (`cms/src/lib/seo.ts`) so "inherits from global" means the
-  same thing everywhere.
-- Resolved metadata served in the public payload (`seo.defaults`,
-  `seo.homepage`, `seo.byProjectSlug`) and on each case study.
-
-The data model and the content are the slow part of an SEO migration. Doing
-them now means the migration below is a wiring change rather than a content
-project.
-
-## What would make it real
-
-Either of these, in order of effort:
-
-**1. Path routing plus prerendering (keeps Vite).**
-Replace `#/work/:slug` with `/work/:slug`, add a prerender step that emits one
-HTML file per route with that route's tags baked in, and rebuild on publish via
-a webhook. Keeps every existing animation and component. Costs a build on each
-publish (~1 minute) instead of the current instant 30-second cache window.
-
-**2. Move the portfolio to Next.js.**
-Metadata becomes server-rendered per route with no build step. This is the
-option the original requirements document assumed, and the one explicitly ruled
-out — it means re-implementing routing and re-verifying the scroll pin, the
-signature loader and the mentors carousel.
-
-Neither is scheduled. Both are unblocked by the work already done.
-
-## The one thing that does work client-side
-
-`document.title` can be updated from React and the browser tab, history entry
-and bookmark name follow it. That is a real if modest improvement when someone
-opens a case study. It is **not** SEO and it is not a link preview — no scraper
-sees it.
-
-This is not currently wired up, deliberately: a half-measure that looks like
-per-page SEO invites the assumption that the rest works too.
+The CMS's SEO data model — the resolution chain in `cms/src/lib/seo.ts`, the
+resolved payload in the public API — predates this fix and was unchanged by
+it. What changed is delivery: real paths mean a crawler's request actually
+carries which page it wants, which a hash fragment could never do.
 
 ## If someone asks "is our SEO set up?"
 
-Yes for the data. No for the delivery. The honest answer is: the metadata is
-written and stored per page; the site serves one global set of tags until the
-routing migration happens.
+Yes, for both the data and the delivery. Set a title, description, and OG
+image on a project or case study in the CMS, publish, and a link shared
+within about 30 seconds to a minute shows exactly that.

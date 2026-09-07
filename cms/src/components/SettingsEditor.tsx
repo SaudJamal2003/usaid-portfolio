@@ -93,8 +93,8 @@ export function SettingsEditor({ initial }: { initial: SettingsValues }) {
       <Card className="p-5">
         <h2 className="text-sm font-semibold text-ink">Default SEO</h2>
         <p className="mb-4 mt-1 text-xs text-muted">
-          The fallback when a page has no metadata of its own. The portfolio uses hash routing, so the
-          live tags still come from index.html — these are stored ready for a move to real paths.
+          The fallback when a page has no metadata of its own. Live on the site within about 30
+          seconds of publishing.
         </p>
         <div className="flex flex-col gap-4">
           <Field label="Default title">

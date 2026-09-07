@@ -1,11 +1,12 @@
 import logo from "../assets/figma/logo.svg";
 import { useContent } from "../content/context";
 import navDot from "../assets/figma/nav-dot.svg";
+import { handleLinkClick } from "../router";
 
 /* Bundled fallback (§18). */
 const NAV_LINKS = [
   { label: "Home", href: "#home" },
-  { label: "About", href: "#/about" },
+  { label: "About", href: "/about" },
   { label: "Work", href: "#work" },
 ];
 
@@ -34,7 +35,7 @@ export function SiteHeader({ current = "Home", className = "h-[130px]" }: SiteHe
       className={`fixed top-0 z-50 flex w-full max-w-[1440px] items-end border-b border-white/50 px-4 backdrop-blur-sm sm:px-6 ${className}`}
     >
       <nav className="mx-auto flex h-[69px] w-full max-w-[1056px] items-center justify-between rounded-[10px] border border-hairline bg-white px-6">
-        <a href="#home" className="shrink-0" aria-label="Usaid home">
+        <a href="#home" onClick={(e) => handleLinkClick(e, "#home")} className="shrink-0" aria-label="Usaid home">
           <img src={logo} alt="Usaid" className="h-[68.797px] w-[80px]" />
         </a>
         <ul className="hidden items-center sm:flex">
@@ -44,6 +45,7 @@ export function SiteHeader({ current = "Home", className = "h-[130px]" }: SiteHe
               <li key={link.label}>
                 <a
                   href={link.href}
+                  onClick={(e) => handleLinkClick(e, link.href)}
                   {...(link.newTab && { target: "_blank", rel: "noreferrer" })}
                   className="flex h-[69px] min-w-[80px] flex-col items-center justify-center text-[16px] font-semibold leading-[20.8px] text-ink-soft lg:min-w-[108.05px]"
                   aria-current={isCurrent ? "page" : undefined}
@@ -57,6 +59,7 @@ export function SiteHeader({ current = "Home", className = "h-[130px]" }: SiteHe
         </ul>
         <a
           href="#contact"
+          onClick={(e) => handleLinkClick(e, "#contact")}
           className="flex h-[48px] w-[120px] shrink-0 items-center justify-center rounded-[12px] border-3 border-ink bg-accent text-[16px] font-semibold leading-none text-ink"
         >
           Contact

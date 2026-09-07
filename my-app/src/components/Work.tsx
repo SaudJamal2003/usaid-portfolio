@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useContent } from '../content/context'
+import { handleLinkClick } from '../router'
 import arrow from '../assets/figma/arrow.svg'
 import teaser from '../assets/figma/work-teaser.png'
 import cricpr from '../assets/figma/work-cricpr.png'
@@ -25,7 +26,7 @@ const FALLBACK_PROJECTS: Project[] = [
       'Voice that finally works is here. Flow lets you create, code, message, and write at the speed of thought.',
     cover: shukarHai,
     aspect: '586/466',
-    href: '#/work/shukar-hai',
+    href: '/work/shukar-hai',
   },
   {
     name: 'CricPR',
@@ -79,7 +80,10 @@ function ProjectCard({ project }: { project: Project }) {
 
   return (
     <Tag
-      {...(!isComingSoon && { href: project.href })}
+      {...(!isComingSoon && {
+        href: project.href,
+        onClick: (e: MouseEvent<HTMLElement>) => handleLinkClick(e, project.href!),
+      })}
       ref={cardRef}
       className="group relative flex cursor-none flex-col"
       onMouseMove={(e: React.MouseEvent) => setCursorPos({ x: e.clientX, y: e.clientY })}

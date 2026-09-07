@@ -4,6 +4,7 @@ import { SiteFooter } from '../components/SiteFooter'
 import { SiteHeader } from '../components/SiteHeader'
 import { BlockRenderer } from '../components/caseStudy/BlockRenderer'
 import type { CmsCaseStudy } from '../content/types'
+import { handleLinkClick } from '../router'
 
 /**
  * A CMS-authored case study.
@@ -157,7 +158,8 @@ export function CaseStudy({ slug, previewToken }: { slug: string; previewToken?:
                     It may have moved, or it may not be published yet.
                   </p>
                   <a
-                    href="#work"
+                    href="/#work"
+                    onClick={(e) => handleLinkClick(e, '/#work')}
                     className="inline-flex h-[52px] items-center justify-center rounded-[12px] border-3 border-ink bg-accent px-[28px] text-[16px] font-semibold text-ink"
                   >
                     See all work

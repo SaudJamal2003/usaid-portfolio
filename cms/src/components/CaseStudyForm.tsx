@@ -112,7 +112,7 @@ export function CaseStudyForm({
   function preview() {
     startTransition(async () => {
       const result = await createPreviewToken(values.id)
-      window.open(`${PORTFOLIO_URL}/#/work/${values.slug}?preview=${result.token}`, '_blank')
+      window.open(`${PORTFOLIO_URL}/work/${values.slug}?preview=${result.token}`, '_blank')
     })
   }
 

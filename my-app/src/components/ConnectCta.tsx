@@ -1,4 +1,5 @@
 import { useContent } from '../content/context'
+import { handleLinkClick } from '../router'
 
 /* The Connect button is a stack of gradient shells, reproduced at the Figma
    dimensions and scaled down as a unit on narrow screens. */
@@ -16,7 +17,12 @@ function Burst({ className }: { className?: string }) {
 
 function ConnectButton({ label, url }: { label: string; url: string }) {
   return (
-    <a href={url} className="group relative block h-[443px] w-[677px]" aria-label={label}>
+    <a
+      href={url}
+      onClick={(e) => handleLinkClick(e, url)}
+      className="group relative block h-[443px] w-[677px]"
+      aria-label={label}
+    >
       {/* pop marks — hidden until hover */}
       <div className="pointer-events-none absolute left-[5px] top-[72px] h-[130px] w-[130px] origin-bottom-right scale-50 opacity-0 transition-all duration-300 ease-out group-hover:scale-100 group-hover:opacity-100">
         <Burst className="h-full w-full" />

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useContent } from '../content/context'
+import { handleLinkClick } from '../router'
 import copyIcon from '../assets/figma/copy-icon.svg'
 import socialX from '../assets/figma/social-1.png'
 import socialInstagram from '../assets/figma/social-2.png'
@@ -68,6 +69,7 @@ export function SiteFooter() {
             <li key={social.name} className="flex size-[72px] items-center justify-center">
               <a
                 href={social.url}
+                onClick={(e) => handleLinkClick(e, social.url)}
                 aria-label={social.name}
                 {...(social.url.startsWith('http') && { target: '_blank', rel: 'noreferrer' })}
               >
