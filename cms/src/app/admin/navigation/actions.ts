@@ -7,21 +7,6 @@ import { db } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
 import { ENTITY_ID_MAX } from '@/lib/constants'
 
-/**
- * Routes the portfolio depends on.
- *
- * Navigation is CMS-managed, but a nav that no longer reaches the work section
- * is a broken site, so these are surfaced as warnings in the editor rather than
- * silently allowed to disappear. The CMS itself is a separate application and
- * cannot be reached from here at all — nothing edited on this screen can lock
- * anyone out of the admin.
- */
-export const REQUIRED_ROUTES = [
-  { url: '#home', label: 'Home' },
-  { url: '#work', label: 'Work' },
-  { url: '/about', label: 'About' },
-]
-
 const itemSchema = z.object({
   id: z.string().min(1).max(ENTITY_ID_MAX),
   label: z.string().trim().max(60),
