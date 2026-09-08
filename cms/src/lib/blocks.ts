@@ -55,6 +55,10 @@ export const blockSchemas = {
     quote: z.string().max(1000),
     attribution: z.string().max(200).optional(),
     role: z.string().max(200).optional(),
+    // Optional so every existing QUOTE block stays valid unchanged. Used by
+    // the Web case-study template's testimonial slot (large portrait beside
+    // the quote card, not a small avatar).
+    portraitId: mediaId.optional(),
   }),
 
   STATS: z.object({
@@ -75,6 +79,45 @@ export const blockSchemas = {
     buttonLabel: z.string().max(60),
     buttonUrl: z.string().max(500),
   }),
+
+  /* The four below exist only to express the Web case-study template's fixed
+     sections -- each one repeatable row, same CRUD shape as every other type,
+     never an array-holding block. See docs/case-study-templates.md. */
+
+  // One of the hero's 3 fanned stat cards. The up-arrow icon and the
+  // fan/rotation geometry are fixed frontend assets, not authored here.
+  HERO_STAT: z.object({
+    value: z.string().max(20),
+    title: z.string().max(80),
+    description: z.string().max(300),
+  }),
+
+  // The research panel's core-insight heading + pull-quote. Used once,
+  // followed by exactly 4 INSIGHT_FINDING blocks.
+  RESEARCH_INTRO: z.object({
+    heading: z.string().max(300),
+    quote: z.string().max(500),
+  }),
+
+  // One of the research panel's 4 numbered findings. The "01"-"04" numeral
+  // is derived from slot position on the frontend, not stored here.
+  INSIGHT_FINDING: z.object({
+    title: z.string().max(120),
+    body: z.string().max(500),
+  }),
+
+  // The full-bleed grayscale video band. Kept distinct from VIDEO so a
+  // template's two video slots (this one and the prototype) are never
+  // ambiguous by type alone.
+  FULL_WIDTH_VIDEO: z
+    .object({
+      mediaId: mediaId.optional(),
+      externalUrl: z.string().url().optional(),
+      grayscale: z.boolean().default(true),
+    })
+    .refine((v) => v.mediaId || v.externalUrl, {
+      message: 'Provide either an uploaded video or an external URL',
+    }),
 } as const
 
 export type BlockTypeName = keyof typeof blockSchemas
@@ -96,6 +139,10 @@ export const BLOCK_META: Record<BlockTypeName, { label: string; description: str
   QUOTE: { label: 'Quote', description: 'A pull quote with attribution', initial: { quote: '' } },
   STATS: { label: 'Statistics', description: 'Outcome figures', initial: { items: [{ value: '', label: '' }] } },
   CTA: { label: 'Call to action', description: 'Heading and a button', initial: { heading: '', buttonLabel: '', buttonUrl: '' } },
+  HERO_STAT: { label: 'Hero stat card', description: 'One of the hero’s 3 fanned stat cards', initial: { value: '', title: '', description: '' } },
+  RESEARCH_INTRO: { label: 'Research intro', description: 'Core insight heading and pull-quote', initial: { heading: '', quote: '' } },
+  INSIGHT_FINDING: { label: 'Research finding', description: 'One of 4 numbered findings', initial: { title: '', body: '' } },
+  FULL_WIDTH_VIDEO: { label: 'Full-width video band', description: 'Edge to edge, grayscale by default', initial: { grayscale: true } },
 }
 
 /** Validates a payload against its type. Returns a discriminated result so
@@ -115,5 +162,9 @@ export function mediaIdsInBlock(type: string, data: unknown): string[] {
   const payload = data as Record<string, unknown>
   if (!payload) return []
   if (type === 'GALLERY') return Array.isArray(payload.mediaIds) ? (payload.mediaIds as string[]) : []
-  return typeof payload.mediaId === 'string' ? [payload.mediaId] : []
+  const ids = typeof payload.mediaId === 'string' ? [payload.mediaId] : []
+  // QUOTE's testimonial portrait is a second, differently-named media
+  // reference alongside the (absent, for this type) mediaId.
+  if (type === 'QUOTE' && typeof payload.portraitId === 'string') ids.push(payload.portraitId)
+  return ids
 }

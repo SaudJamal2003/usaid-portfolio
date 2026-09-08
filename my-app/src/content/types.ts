@@ -50,12 +50,18 @@ export type CmsMentor = {
 export type CmsBlock = {
   id: string
   type: string
-  data: Record<string, unknown> & { media?: CmsMedia | CmsMedia[] | null }
+  data: Record<string, unknown> & {
+    media?: CmsMedia | CmsMedia[] | null
+    // QUOTE's optional testimonial portrait -- hydrated alongside `media`,
+    // under its own key since a QUOTE never has a mediaId of its own.
+    portrait?: CmsMedia | null
+  }
 }
 
 export type CmsCaseStudy = {
   slug: string
   title: string
+  category: 'WEB' | 'APP'
   shortDescription: string | null
   client: string | null
   role: string | null

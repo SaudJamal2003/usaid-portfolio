@@ -14,8 +14,10 @@ export type EditorBlock = {
 }
 
 /* Per-type fields. Deliberately narrow inputs -- no font, colour or spacing
-   controls anywhere, because the portfolio owns how this renders (§3, §62.14). */
-function BlockFields({
+   controls anywhere, because the portfolio owns how this renders (§3, §62.14).
+   Exported: WebTemplateEditor reuses this directly, so a field added here for
+   one editor stays correct for both. */
+export function BlockFields({
   type,
   data,
   onChange,
@@ -131,6 +133,11 @@ function BlockFields({
           <Field label="Role">
             <Input value={text('role')} onChange={(e) => set('role', e.target.value)} />
           </Field>
+          <MediaPicker
+            label="Portrait"
+            value={text('portraitId')}
+            onChange={(id) => set('portraitId', id)}
+          />
         </>
       )
 
@@ -199,6 +206,70 @@ function BlockFields({
           <Field label="Button URL" required>
             <Input value={text('buttonUrl')} onChange={(e) => set('buttonUrl', e.target.value)} />
           </Field>
+        </>
+      )
+
+    case 'HERO_STAT':
+      return (
+        <>
+          <Field label="Value" required hint="e.g. 47%">
+            <Input value={text('value')} onChange={(e) => set('value', e.target.value)} />
+          </Field>
+          <Field label="Title" required>
+            <Input value={text('title')} onChange={(e) => set('title', e.target.value)} />
+          </Field>
+          <Field label="Description" required>
+            <Textarea rows={2} value={text('description')} onChange={(e) => set('description', e.target.value)} />
+          </Field>
+        </>
+      )
+
+    case 'RESEARCH_INTRO':
+      return (
+        <>
+          <Field label="Heading" required hint="The core insight -- this doubles as the section title.">
+            <Textarea rows={2} value={text('heading')} onChange={(e) => set('heading', e.target.value)} />
+          </Field>
+          <Field label="Pull-quote" required>
+            <Textarea rows={2} value={text('quote')} onChange={(e) => set('quote', e.target.value)} />
+          </Field>
+        </>
+      )
+
+    case 'INSIGHT_FINDING':
+      return (
+        <>
+          <Field label="Title" required>
+            <Input value={text('title')} onChange={(e) => set('title', e.target.value)} />
+          </Field>
+          <Field label="Body" required>
+            <Textarea rows={3} value={text('body')} onChange={(e) => set('body', e.target.value)} />
+          </Field>
+        </>
+      )
+
+    case 'FULL_WIDTH_VIDEO':
+      return (
+        <>
+          <MediaPicker
+            label="Video file"
+            kind="video"
+            accept="video/mp4,video/webm"
+            value={text('mediaId')}
+            onChange={(id) => set('mediaId', id)}
+          />
+          <Field label="or external URL" hint="Use this instead of uploading a large file.">
+            <Input value={text('externalUrl')} onChange={(e) => set('externalUrl', e.target.value)} />
+          </Field>
+          <label className="flex items-center gap-2 text-sm text-ink-soft">
+            <input
+              type="checkbox"
+              checked={(data.grayscale as boolean) ?? true}
+              onChange={(e) => set('grayscale', e.target.checked)}
+              className="size-4 accent-[color:var(--color-accent-deep)]"
+            />
+            Grayscale
+          </label>
         </>
       )
   }

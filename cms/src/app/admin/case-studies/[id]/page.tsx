@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db'
 import { CaseStudyForm, type CaseStudyValues } from '@/components/CaseStudyForm'
-import { BlockEditor, type EditorBlock } from '@/components/BlockEditor'
+import { type EditorBlock } from '@/components/BlockEditor'
+import { WebTemplateEditor } from '@/components/WebTemplateEditor'
 import type { BlockTypeName } from '@/lib/blocks'
 import { EMPTY_SEO } from '@/components/SeoFields'
 
@@ -27,6 +28,7 @@ export default async function EditCaseStudy({ params }: { params: Promise<{ id: 
     id: caseStudy.id,
     title: caseStudy.title,
     slug: caseStudy.slug,
+    category: caseStudy.category,
     shortDescription: text(caseStudy.shortDescription),
     client: text(caseStudy.client),
     industry: text(caseStudy.industry),
@@ -77,7 +79,14 @@ export default async function EditCaseStudy({ params }: { params: Promise<{ id: 
       />
 
       <div className="mt-6">
-        <BlockEditor caseStudyId={caseStudy.id} initialBlocks={blocks} />
+        {caseStudy.category === 'APP' ? (
+          <p className="rounded-lg border border-line bg-raised p-4 text-sm text-muted">
+            This case study is set to App — the public page shows &ldquo;Coming soon&rdquo; and no
+            template content below applies. Switch it to Web above to edit the case study body.
+          </p>
+        ) : (
+          <WebTemplateEditor caseStudyId={caseStudy.id} initialBlocks={blocks} />
+        )}
       </div>
     </>
   )

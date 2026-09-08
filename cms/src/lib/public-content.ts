@@ -221,6 +221,9 @@ async function hydrateBlocks(blocks: { id: string; type: string; data: unknown }
     const payload = block.data as Record<string, unknown>
     if (typeof payload?.mediaId === 'string') ids.add(payload.mediaId)
     if (Array.isArray(payload?.mediaIds)) for (const id of payload.mediaIds as string[]) ids.add(id)
+    // QUOTE's testimonial portrait -- a second, differently-named media
+    // reference alongside (the otherwise-absent, for this type) mediaId.
+    if (typeof payload?.portraitId === 'string') ids.add(payload.portraitId)
   }
 
   const rows = ids.size
@@ -234,6 +237,7 @@ async function hydrateBlocks(blocks: { id: string; type: string; data: unknown }
     if (Array.isArray(payload.mediaIds)) {
       payload.media = (payload.mediaIds as string[]).map((id) => byId.get(id) ?? null).filter(Boolean)
     }
+    if (typeof payload.portraitId === 'string') payload.portrait = byId.get(payload.portraitId) ?? null
     return { id: block.id, type: block.type, data: payload }
   })
 }
@@ -252,6 +256,7 @@ export async function getCaseStudy(slug: string, options: { includeDrafts?: bool
   return {
     slug: caseStudy.slug,
     title: caseStudy.title,
+    category: caseStudy.category,
     shortDescription: caseStudy.shortDescription,
     client: caseStudy.client,
     industry: caseStudy.industry,

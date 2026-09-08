@@ -20,6 +20,7 @@ export type CaseStudyValues = {
   id: string
   title: string
   slug: string
+  category: 'WEB' | 'APP'
   shortDescription: string
   client: string
   industry: string
@@ -162,6 +163,30 @@ export function CaseStudyForm({
       </div>
 
       {message && <Alert tone={message.tone === 'error' ? 'error' : 'info'}>{message.text}</Alert>}
+
+      <Card className="p-5">
+        <h2 className="mb-1 text-sm font-semibold text-ink">Category</h2>
+        <p className="mb-3 text-xs text-muted">
+          Web uses a fixed template matching the Shukar Hai reference case study, section for
+          section. App shows &ldquo;Coming soon&rdquo; until a design exists for it.
+        </p>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant={values.category === 'WEB' ? 'primary' : 'secondary'}
+            onClick={() => set('category', 'WEB')}
+          >
+            Web
+          </Button>
+          <Button
+            type="button"
+            variant={values.category === 'APP' ? 'primary' : 'secondary'}
+            onClick={() => set('category', 'APP')}
+          >
+            App
+          </Button>
+        </div>
+      </Card>
 
       <Card className="p-5">
         <h2 className="mb-4 text-sm font-semibold text-ink">Basic information</h2>

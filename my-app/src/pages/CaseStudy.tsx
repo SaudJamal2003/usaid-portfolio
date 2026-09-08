@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ConnectCta } from '../components/ConnectCta'
 import { SiteFooter } from '../components/SiteFooter'
 import { SiteHeader } from '../components/SiteHeader'
-import { BlockRenderer } from '../components/caseStudy/BlockRenderer'
+import { WebCaseStudyTemplate } from '../components/caseStudy/template/WebCaseStudyTemplate'
 import type { CmsCaseStudy } from '../content/types'
 import { handleLinkClick } from '../router'
 
@@ -66,11 +66,6 @@ export function CaseStudy({ slug, previewToken }: { slug: string; previewToken?:
     }
   }, [slug, previewToken])
 
-  const meta =
-    load.state === 'ready'
-      ? [load.caseStudy.role, load.caseStudy.duration, load.caseStudy.client].filter(Boolean)
-      : []
-
   return (
     <>
       <div className="mx-auto w-full max-w-[1440px] overflow-x-clip bg-white font-sans text-ink antialiased">
@@ -85,89 +80,58 @@ export function CaseStudy({ slug, previewToken }: { slug: string; previewToken?:
             </div>
           )}
 
-          {/* The hero keeps the intro section's proportions: a display heading
-              over a meta row, on the same 1240 column as the blocks below. */}
-          <section className="px-4 sm:px-6">
-            <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-[24px]">
-              <h1 className="font-display text-[clamp(40px,5.56vw,80px)] leading-[1.1] tracking-[-0.0375em] text-ink">
-                {load.state === 'ready' ? load.caseStudy.heroTitle || load.caseStudy.title : ' '}
-              </h1>
-
-              {load.state === 'ready' && load.caseStudy.heroDescription && (
-                <p className="max-w-[900px] font-display text-[clamp(20px,1.94vw,28px)] leading-[1.4] text-body">
-                  {load.caseStudy.heroDescription}
-                </p>
-              )}
-
-              {meta.length > 0 && (
-                <dl className="flex flex-wrap gap-x-[48px] gap-y-[16px] border-t border-hairline pt-[24px]">
-                  {load.state === 'ready' &&
-                    (
-                      [
-                        ['Role', load.caseStudy.role],
-                        ['Timeline', load.caseStudy.duration],
-                        ['Client', load.caseStudy.client],
-                        ['Scope', load.caseStudy.projectType],
-                      ] as const
-                    )
-                      .filter(([, value]) => Boolean(value))
-                      .map(([label, value]) => (
-                        <div key={label} className="flex flex-col gap-[6px]">
-                          <dt className="font-display text-[13px] uppercase tracking-[0.08em] text-muted">
-                            {label}
-                          </dt>
-                          <dd className="font-display text-[clamp(16px,1.4vw,20px)] text-ink">{value}</dd>
-                        </div>
-                      ))}
-                </dl>
-              )}
-            </div>
-          </section>
-
-          {load.state === 'ready' && load.caseStudy.hero && (
-            <section className="mt-[60px] px-4 sm:px-6">
-              <div className="mx-auto w-full max-w-[1240px] overflow-hidden rounded-[20px] border border-white bg-panel shadow-[0_4px_21px_0_rgba(0,0,0,0.07)]">
-                <img
-                  src={load.caseStudy.hero.url}
-                  alt={load.caseStudy.hero.alt}
-                  className="h-auto w-full object-cover"
-                />
+          {load.state === 'loading' && (
+            <section className="px-4 sm:px-6">
+              <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-[24px]">
+                <h1 className="font-display text-[clamp(40px,5.56vw,80px)] leading-[1.1] tracking-[-0.0375em] text-ink">
+                  {' '}
+                </h1>
               </div>
             </section>
           )}
 
-          <div className="mt-[120px]">
-            {load.state === 'ready' && <BlockRenderer blocks={load.caseStudy.blocks} />}
-
-            {/* A study with no blocks is a valid draft, not an error. */}
-            {load.state === 'ready' && load.caseStudy.blocks.length === 0 && (
-              <section className="px-4 sm:px-6">
-                <p className="mx-auto w-full max-w-[1240px] font-display text-[clamp(18px,1.6vw,24px)] text-muted">
-                  This case study is still being written.
-                </p>
-              </section>
-            )}
-
-            {load.state === 'missing' && (
-              <section className="px-4 sm:px-6">
-                <div className="mx-auto flex w-full max-w-[1240px] flex-col items-start gap-[20px]">
-                  <h2 className="font-display text-[clamp(32px,3.89vw,56px)] font-medium leading-[1.107] tracking-[-0.0357em] text-ink">
-                    This case study isn&rsquo;t available.
-                  </h2>
-                  <p className="font-display text-[clamp(18px,1.6vw,24px)] text-body">
-                    It may have moved, or it may not be published yet.
+          {load.state === 'ready' && load.caseStudy.category === 'APP' && (
+            /* No design exists for App case studies yet -- title and client
+               only, styled like the "isn't available" empty state below,
+               deliberately not the full Web hero/meta/block treatment. */
+            <section className="px-4 sm:px-6">
+              <div className="mx-auto flex w-full max-w-[1240px] flex-col items-start gap-[20px]">
+                <h1 className="font-display text-[clamp(32px,3.89vw,56px)] font-medium leading-[1.107] tracking-[-0.0357em] text-ink">
+                  {load.caseStudy.title}
+                </h1>
+                {load.caseStudy.client && (
+                  <p className="font-display text-[clamp(18px,1.6vw,24px)] text-muted">
+                    {load.caseStudy.client}
                   </p>
-                  <a
-                    href="/#work"
-                    onClick={(e) => handleLinkClick(e, '/#work')}
-                    className="inline-flex h-[52px] items-center justify-center rounded-[12px] border-3 border-ink bg-accent px-[28px] text-[16px] font-semibold text-ink"
-                  >
-                    See all work
-                  </a>
-                </div>
-              </section>
-            )}
-          </div>
+                )}
+                <p className="font-display text-[clamp(18px,1.6vw,24px)] text-body">Coming soon.</p>
+              </div>
+            </section>
+          )}
+
+          {load.state === 'ready' && load.caseStudy.category !== 'APP' && (
+            <WebCaseStudyTemplate caseStudy={load.caseStudy} />
+          )}
+
+          {load.state === 'missing' && (
+            <section className="px-4 sm:px-6">
+              <div className="mx-auto flex w-full max-w-[1240px] flex-col items-start gap-[20px]">
+                <h2 className="font-display text-[clamp(32px,3.89vw,56px)] font-medium leading-[1.107] tracking-[-0.0357em] text-ink">
+                  This case study isn&rsquo;t available.
+                </h2>
+                <p className="font-display text-[clamp(18px,1.6vw,24px)] text-body">
+                  It may have moved, or it may not be published yet.
+                </p>
+                <a
+                  href="/#work"
+                  onClick={(e) => handleLinkClick(e, '/#work')}
+                  className="inline-flex h-[52px] items-center justify-center rounded-[12px] border-3 border-ink bg-accent px-[28px] text-[16px] font-semibold text-ink"
+                >
+                  See all work
+                </a>
+              </div>
+            </section>
+          )}
 
           <ConnectCta className="mt-[200px]" />
         </main>

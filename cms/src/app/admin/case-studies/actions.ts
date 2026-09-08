@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { requireUser } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
-import { parseBlock } from '@/lib/blocks'
+import { parseBlock, BLOCK_META } from '@/lib/blocks'
 import { slugify } from '@/lib/slug'
 import { NEW_DRAFT_TITLE } from '@/lib/constants'
 
@@ -16,6 +16,7 @@ const detailsSchema = z.object({
   id: z.string().cuid(),
   title: z.string().trim().min(1, 'Title is required').max(200),
   slug: z.string().trim().min(1, 'Slug is required').max(120),
+  category: z.enum(['WEB', 'APP']).default('WEB'),
   shortDescription: z.string().trim().max(1000).optional().or(z.literal('')).transform((v) => v || null),
   client: optionalText,
   industry: optionalText,
@@ -75,6 +76,10 @@ export async function saveCaseStudy(input: unknown) {
     entityId: id,
     summary: `Updated case study "${data.title}"`,
   })
+
+  // Idempotent -- a no-op once the template blocks exist, so this is safe
+  // to call on every save rather than only the save that flips the category.
+  if (data.category === 'WEB') await ensureWebTemplateBlocks(id)
 
   revalidatePath(`/admin/case-studies/${id}`)
   return { ok: true as const }
@@ -146,6 +151,59 @@ export async function reorderBlocks(caseStudyId: string, orderedIds: string[]) {
   return { ok: true as const }
 }
 
+/**
+ * The Web template's fixed sections, in Shukar Hai's exact order. One row
+ * per slot, same shape/CRUD path as every other block -- consistency comes
+ * from WebTemplateEditor not exposing add/remove/reorder, not from a
+ * separate schema (§ case study category). Sub-heading slots start with the
+ * reference case study's own wording as an editable starting point -- an
+ * admin can rename them, only the structure (image+copy, divider, copy-only)
+ * is fixed.
+ */
+const WEB_TEMPLATE_SLOTS: { type: keyof typeof BLOCK_META; data: unknown }[] = [
+  { type: 'HERO_STAT', data: BLOCK_META.HERO_STAT.initial },
+  { type: 'HERO_STAT', data: BLOCK_META.HERO_STAT.initial },
+  { type: 'HERO_STAT', data: BLOCK_META.HERO_STAT.initial },
+  { type: 'IMAGE_TEXT', data: { heading: 'The Problem', content: '', imagePosition: 'right' } },
+  { type: 'TEXT', data: { heading: 'What was getting in the way?', content: '' } },
+  { type: 'RESEARCH_INTRO', data: BLOCK_META.RESEARCH_INTRO.initial },
+  { type: 'INSIGHT_FINDING', data: BLOCK_META.INSIGHT_FINDING.initial },
+  { type: 'INSIGHT_FINDING', data: BLOCK_META.INSIGHT_FINDING.initial },
+  { type: 'INSIGHT_FINDING', data: BLOCK_META.INSIGHT_FINDING.initial },
+  { type: 'INSIGHT_FINDING', data: BLOCK_META.INSIGHT_FINDING.initial },
+  { type: 'GALLERY', data: BLOCK_META.GALLERY.initial },
+  { type: 'VIDEO', data: BLOCK_META.VIDEO.initial },
+  { type: 'FULL_WIDTH_VIDEO', data: BLOCK_META.FULL_WIDTH_VIDEO.initial },
+  { type: 'QUOTE', data: BLOCK_META.QUOTE.initial },
+]
+
+/** Seeds the 14 fixed template blocks the first time a case study is set to
+ *  Web. A no-op if any already exist, so flipping Web -> App -> Web never
+ *  duplicates or loses authored content. */
+export async function ensureWebTemplateBlocks(caseStudyId: string) {
+  await requireUser()
+
+  const existing = await db.caseStudyBlock.findFirst({
+    where: { caseStudyId, type: { in: ['HERO_STAT', 'RESEARCH_INTRO', 'INSIGHT_FINDING', 'FULL_WIDTH_VIDEO'] } },
+  })
+  if (existing) return { ok: true as const }
+
+  await db.$transaction(
+    WEB_TEMPLATE_SLOTS.map(({ type, data }, displayOrder) =>
+      db.caseStudyBlock.create({
+        data: {
+          caseStudyId,
+          type,
+          data: data as never,
+          displayOrder,
+        },
+      }),
+    ),
+  )
+  revalidatePath(`/admin/case-studies/${caseStudyId}`)
+  return { ok: true as const }
+}
+
 /** Publishing validates first: an incomplete case study must not go live (§33). */
 export async function publishCaseStudy(id: string) {
   const user = await requireUser()
@@ -160,8 +218,13 @@ export async function publishCaseStudy(id: string) {
   if (!caseStudy.slug.trim() || caseStudy.slug.startsWith('untitled-case-study')) {
     problems.push('set a slug')
   }
-  if (!caseStudy.heroId && !caseStudy.thumbnailId) problems.push('choose a hero or thumbnail image')
-  if (caseStudy.blocks.length === 0) problems.push('add at least one content block')
+  // App's entire public page is "Coming soon" -- a title and slug are
+  // enough. Web keeps the fuller floor: a hero/thumbnail and at least one
+  // block, same as before this category existed.
+  if (caseStudy.category === 'WEB') {
+    if (!caseStudy.heroId && !caseStudy.thumbnailId) problems.push('choose a hero or thumbnail image')
+    if (caseStudy.blocks.length === 0) problems.push('add at least one content block')
+  }
 
   if (problems.length) {
     return { ok: false as const, error: `Before publishing, ${problems.join(', ')}.` }

@@ -10,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Pooled. Every serverless invocation opens its own connection, so in
   // production this points at the pooler endpoint (PgBouncer) rather than the
   // database directly, which would exhaust connections under any real traffic.
@@ -43,6 +43,21 @@ enum BlockType {
   QUOTE
   STATS
   CTA
+  // The four below exist only to express the Web case-study template's
+  // fixed sections (§ case study category) -- each is one repeatable row,
+  // same CRUD shape as every other type, not an array-holding block.
+  HERO_STAT
+  RESEARCH_INTRO
+  INSIGHT_FINDING
+  FULL_WIDTH_VIDEO
+}
+
+// Governs which page template a case study renders with. Web gets the
+// full, fixed Shukar-Hai-shaped template; App shows "Coming soon" until a
+// design exists for it (§ case study category).
+enum CaseStudyCategory {
+  WEB
+  APP
 }
 
 // ---------------------------------------------------------------------------
@@ -93,8 +108,8 @@ model LoginAttempt {
 // ---------------------------------------------------------------------------
 
 model Media {
-  id               String   @id @default(cuid())
-  storageKey       String   @unique
+  id               String    @id @default(cuid())
+  storageKey       String    @unique
   originalFilename String
   mimeType         String
   size             Int
@@ -112,21 +127,21 @@ model Media {
   archivedAt       DateTime?
   // Derived renditions: { thumb, medium, large } → storage keys.
   renditions       Json?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Every inbound reference is named so the delete guard can report exactly
   // where an asset is used before allowing removal (§38).
-  projectThumbnails   Project[]     @relation("ProjectThumbnail")
-  projectHeroes       Project[]     @relation("ProjectHero")
-  caseStudyHeroes     CaseStudy[]   @relation("CaseStudyHero")
-  caseStudyThumbnails CaseStudy[]   @relation("CaseStudyThumb")
+  projectThumbnails   Project[]      @relation("ProjectThumbnail")
+  projectHeroes       Project[]      @relation("ProjectHero")
+  caseStudyHeroes     CaseStudy[]    @relation("CaseStudyHero")
+  caseStudyThumbnails CaseStudy[]    @relation("CaseStudyThumb")
   experienceLogos     Experience[]
   mentorPhotos        Mentor[]
   galleryImages       GalleryItem[]
   serviceIcons        Service[]
-  testimonialAvatars  Testimonial[] @relation("TestimonialAvatar")
-  testimonialLogos    Testimonial[] @relation("TestimonialLogo")
+  testimonialAvatars  Testimonial[]  @relation("TestimonialAvatar")
+  testimonialLogos    Testimonial[]  @relation("TestimonialLogo")
   seoImages           SeoMetadata[]
   heroPortraits       HomepageHero[]
   aboutPortraits      AboutContent[]
@@ -163,28 +178,28 @@ model SiteSettings {
 }
 
 model HomepageHero {
-  id            String   @id @default("singleton")
-  eyebrow       String?
-  titlePrefix   String
+  id              String   @id @default("singleton")
+  eyebrow         String?
+  titlePrefix     String
   // TypingWord cycles these; the timing constants stay in the frontend.
-  typingWords   String[]
-  description   String?
+  typingWords     String[]
+  description     String?
   primaryCtaLabel String?
   primaryCtaUrl   String?
-  portraitId    String?
-  portrait      Media?   @relation(fields: [portraitId], references: [id], onDelete: SetNull)
-  updatedAt     DateTime @updatedAt
+  portraitId      String?
+  portrait        Media?   @relation(fields: [portraitId], references: [id], onDelete: SetNull)
+  updatedAt       DateTime @updatedAt
 
   @@map("homepage_hero")
 }
 
 model AboutContent {
-  id          String   @id @default("singleton")
-  heading     String
-  bio         String
-  portraitId  String?
-  portrait    Media?   @relation(fields: [portraitId], references: [id], onDelete: SetNull)
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default("singleton")
+  heading    String
+  bio        String
+  portraitId String?
+  portrait   Media?   @relation(fields: [portraitId], references: [id], onDelete: SetNull)
+  updatedAt  DateTime @updatedAt
 
   @@map("about_content")
 }
@@ -202,13 +217,13 @@ model ContactCta {
 }
 
 model FooterSettings {
-  id            String   @id @default("singleton")
-  description   String?
-  email         String
-  copyright     String?
-  ctaLabel      String?
-  ctaUrl        String?
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default("singleton")
+  description String?
+  email       String
+  copyright   String?
+  ctaLabel    String?
+  ctaUrl      String?
+  updatedAt   DateTime @updatedAt
 
   @@map("footer_settings")
 }
@@ -339,19 +354,19 @@ model Service {
 }
 
 model Testimonial {
-  id           String        @id @default(cuid())
-  name         String
-  role         String?
-  company      String?
-  quote        String
-  linkedinUrl  String?
-  avatarId     String?
-  avatar       Media?        @relation("TestimonialAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+  id            String        @id @default(cuid())
+  name          String
+  role          String?
+  company       String?
+  quote         String
+  linkedinUrl   String?
+  avatarId      String?
+  avatar        Media?        @relation("TestimonialAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
   companyLogoId String?
-  companyLogo  Media?        @relation("TestimonialLogo", fields: [companyLogoId], references: [id], onDelete: SetNull)
-  featured     Boolean       @default(false)
-  displayOrder Int
-  status       ContentStatus @default(DRAFT)
+  companyLogo   Media?        @relation("TestimonialLogo", fields: [companyLogoId], references: [id], onDelete: SetNull)
+  featured      Boolean       @default(false)
+  displayOrder  Int
+  status        ContentStatus @default(DRAFT)
 
   @@index([displayOrder])
   @@map("testimonials")
@@ -392,9 +407,13 @@ model Project {
 }
 
 model CaseStudy {
-  id               String        @id @default(cuid())
+  id               String            @id @default(cuid())
   title            String
-  slug             String        @unique
+  slug             String            @unique
+  // Defaults to WEB so every existing row -- including the seeded,
+  // never-rendered "shukar-hai" CMS row -- keeps its current behaviour
+  // rather than silently becoming "Coming soon" on migration.
+  category         CaseStudyCategory @default(WEB)
   shortDescription String?
   client           String?
   industry         String?
@@ -408,14 +427,14 @@ model CaseStudy {
   heroTitle        String?
   heroDescription  String?
   heroId           String?
-  hero             Media?        @relation("CaseStudyHero", fields: [heroId], references: [id], onDelete: SetNull)
+  hero             Media?            @relation("CaseStudyHero", fields: [heroId], references: [id], onDelete: SetNull)
   thumbnailId      String?
-  thumbnail        Media?        @relation("CaseStudyThumb", fields: [thumbnailId], references: [id], onDelete: SetNull)
-  featured         Boolean       @default(false)
-  status           ContentStatus @default(DRAFT)
+  thumbnail        Media?            @relation("CaseStudyThumb", fields: [thumbnailId], references: [id], onDelete: SetNull)
+  featured         Boolean           @default(false)
+  status           ContentStatus     @default(DRAFT)
   publishedAt      DateTime?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   blocks  CaseStudyBlock[]
   project Project?
@@ -425,16 +444,16 @@ model CaseStudy {
 }
 
 model CaseStudyBlock {
-  id          String    @id @default(cuid())
-  caseStudyId String
-  caseStudy   CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: Cascade)
-  type        BlockType
+  id           String    @id @default(cuid())
+  caseStudyId  String
+  caseStudy    CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: Cascade)
+  type         BlockType
   // Shape is validated per type by a Zod discriminated union before it lands
   // here, so adding a block type never means a migration (§17).
-  data        Json
+  data         Json
   displayOrder Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([caseStudyId, displayOrder])
   @@map("case_study_blocks")
