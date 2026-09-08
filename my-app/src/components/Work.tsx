@@ -140,7 +140,7 @@ export function Work() {
           description: project.shortDescription ?? '',
           cover: project.thumbnail?.mediumUrl ?? project.thumbnail?.url ?? '',
           aspect: project.aspectRatio ?? '586/466',
-          href: project.caseStudySlug ? `#/work/${project.caseStudySlug}` : undefined,
+          href: project.caseStudySlug ? `/work/${project.caseStudySlug}` : undefined,
         }))
       : FALLBACK_PROJECTS
 

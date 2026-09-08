@@ -197,7 +197,7 @@ async function main() {
   // ---- navigation & socials --------------------------------------------
   const nav = [
     { label: 'Home', url: '#home' },
-    { label: 'About', url: '#/about' },
+    { label: 'About', url: '/about' },
     { label: 'Work', url: '#work' },
   ]
   for (const [i, item] of nav.entries()) {

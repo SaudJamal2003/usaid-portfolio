@@ -19,7 +19,7 @@ import { ENTITY_ID_MAX } from '@/lib/constants'
 export const REQUIRED_ROUTES = [
   { url: '#home', label: 'Home' },
   { url: '#work', label: 'Work' },
-  { url: '#/about', label: 'About' },
+  { url: '/about', label: 'About' },
 ]
 
 const itemSchema = z.object({

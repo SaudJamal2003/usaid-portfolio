@@ -20,7 +20,7 @@ export type NavItem = {
 const REQUIRED = [
   { url: '#home', label: 'Home' },
   { url: '#work', label: 'Work' },
-  { url: '#/about', label: 'About' },
+  { url: '/about', label: 'About' },
 ]
 
 export function NavigationEditor({ initial }: { initial: NavItem[] }) {
