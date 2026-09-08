@@ -2,6 +2,7 @@ import 'server-only'
 import bcrypt from 'bcryptjs'
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { cache } from 'react'
 import { db } from './db'
 import { env } from './env'
@@ -81,10 +82,17 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   }
 })
 
-/** Use in every admin server action. Throws rather than returning null so a
- *  forgotten check fails closed. */
+/**
+ * Use in every admin server action. Fails closed on a missing session, same
+ * as the layout's own check on page load — but redirects, rather than
+ * throwing, so a session that expires or is invalidated (a SESSION_SECRET
+ * rotation logs out every existing one) between page load and clicking a
+ * button sends the user back to /login. A throw here used to surface as
+ * admin/error.tsx's generic "database unreachable" screen, which is a
+ * misleading diagnosis for what is actually just an expired login.
+ */
 export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser()
-  if (!user) throw new Error('UNAUTHORIZED')
+  if (!user) redirect('/login')
   return user
 }
